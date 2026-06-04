@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1a1a2e">
+  <title>Presupuesto Diario</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    :root {
+      --bg: #0f0f1a; --card: #1a1a2e; --card2: #16213e;
+      --accent: #4f8ef7; --green: #2ecc71; --yellow: #f39c12; --red: #e74c3c;
+      --text: #f0f0f0; --muted: #8888aa; --border: #2a2a4a;
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; padding-bottom: 80px; }
+
+    .header { background: var(--card); padding: 16px 20px 12px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border); }
+    .header-top { display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 18px; font-weight: 700; }
+    .header .period { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .tabs { display: flex; background: var(--card); border-bottom: 1px solid var(--border); position: sticky; top: 61px; z-index: 99; overflow-x: auto; }
+    .tab { flex: 1; min-width: 60px; padding: 10px 6px; text-align: center; font-size: 12px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap; }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .page { display: none; padding: 16px; }
+    .page.active { display: block; }
+
+    .card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); }
+    .card-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+
+    .budget-main { text-align: center; padding: 8px 0 4px; }
+    .budget-amount { font-size: 42px; font-weight: 800; line-height: 1; }
+    .budget-amount.ok { color: var(--green); }
+    .budget-amount.warn { color: var(--yellow); }
+    .budget-amount.over { color: var(--red); }
+    .budget-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    .progress-wrap { margin: 12px 0 4px; }
+    .progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+    .progress-fill.ok { background: var(--green); }
+    .progress-fill.warn { background: var(--yellow); }
+    .progress-fill.over { background: var(--red); }
+    .progress-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .stat-card { background: var(--card); border-radius: 12px; padding: 12px 8px; text-align: center; border: 1px solid var(--border); }
+    .stat-value { font-size: 16px; font-weight: 700; }
+    .stat-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+    .add-btn { position: fixed; bottom: 88px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--accent); border: none; color: white; font-size: 28px; cursor: pointer; box-shadow: 0 4px 20px rgba(79,142,247,0.4); display: flex; align-items: center; justify-content: center; z-index: 200; transition: transform 0.15s; }
+    .add-btn:active { transform: scale(0.93); }
+
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 300; align-items: flex-end; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--card2); border-radius: 24px 24px 0 0; padding: 24px 20px 40px; width: 100%; max-height: 90vh; overflow-y: auto; animation: slideUp 0.25s ease; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: block; }
+    .amount-input { width: 100%; background: var(--bg); border: 2px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text); font-size: 28px; font-weight: 700; text-align: center; outline: none; transition: border-color 0.2s; }
+    .amount-input:focus { border-color: var(--accent); }
+    .text-input { width: 100%; background: var(--bg); border: 2px solid var(--border); border-radius: 12px; padding: 12px 16px; color: var(--text); font-size: 16px; outline: none; transition: border-color 0.2s; }
+    .text-input:focus { border-color: var(--accent); }
+
+    .cat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .cat-pill { padding: 10px 8px; border-radius: 10px; border: 2px solid var(--border); background: var(--bg); color: var(--muted); font-size: 13px; text-align: center; cursor: pointer; transition: all 0.15s; }
+    .cat-pill.selected { border-color: var(--accent); background: rgba(79,142,247,0.15); color: var(--text); }
+    .cat-pill .cat-icon { font-size: 20px; display: block; margin-bottom: 2px; }
+
+    .submit-btn { width: 100%; padding: 16px; background: var(--accent); border: none; border-radius: 14px; color: white; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: opacity 0.2s; }
+    .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .expense-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .expense-item:last-child { border-bottom: none; }
+    .exp-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; margin-right: 12px; }
+    .exp-info { flex: 1; min-width: 0; }
+    .exp-concept { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .exp-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .exp-amount { font-size: 15px; font-weight: 700; flex-shrink: 0; }
+    .exp-delete { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px 0 4px 8px; }
+
+    .cat-bar-row { margin-bottom: 12px; }
+    .cat-bar-header { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 13px; }
+    .cat-bar-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .cat-bar-fill { height: 100%; border-radius: 3px; }
+
+    .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .settings-row:last-child { border-bottom: none; }
+
+    .date-group-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; padding: 8px 0 4px; }
+
+    .empty-state { text-align: center; color: var(--muted); padding: 40px 0; font-size: 14px; }
+    .empty-state .empty-icon { font-size: 40px; margin-bottom: 8px; }
+
+    .block-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .block-chip { padding: 6px 12px; border-radius: 20px; font-size: 11px; border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: all 0.15s; }
+    .block-chip:active { transform: scale(0.95); }
+    .block-chip.current { border-color: var(--muted); color: var(--text); }
+    .block-chip.selected { background: rgba(79,142,247,0.2); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+
+    .period-item { display: flex; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .period-item:last-child { border-bottom: none; }
+    .period-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); margin-right: 12px; flex-shrink: 0; }
+    .period-dot.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+    .period-info { flex: 1; }
+    .period-name { font-size: 15px; font-weight: 600; }
+    .period-dates { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .period-badge { font-size: 11px; padding: 3px 8px; border-radius: 10px; background: rgba(79,142,247,0.2); color: var(--accent); }
+    .period-delete-btn { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px; }
+
+    .pf-row { display: flex; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+    .pf-row:last-of-type { border-bottom: none; }
+    .pf-label { font-size: 14px; color: var(--muted); width: 110px; flex-shrink: 0; }
+    .pf-select, .pf-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-size: 15px; outline: none; appearance: none; cursor: pointer; }
+    .pf-select:focus, .pf-input:focus { border-color: var(--accent); }
+    .pf-input[type=number] { -moz-appearance: textfield; }
+    .pf-input[type=number]::-webkit-inner-spin-button { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <h1>💰 Presupuesto</h1>
+      <div class="period" id="periodLabel">Cargando...</div>
+    </div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('home')" id="tab-home">Hoy</div>
+  <div class="tab" onclick="showTab('history')" id="tab-history">Historial</div>
+  <div class="tab" onclick="showTab('analysis')" id="tab-analysis">Análisis</div>
+  <div class="tab" onclick="showTab('periods')" id="tab-periods">Períodos</div>
+  <div class="tab" onclick="showTab('settings')" id="tab-settings">Config</div>
+</div>
+
+<!-- HOME -->
+<div class="page active" id="page-home">
+  <div class="card">
+    <div class="card-title">Disponible</div>
+    <div class="budget-main">
+      <div class="budget-amount ok" id="availableAmount">$0</div>
+      <div class="budget-label" id="availableLabel">—</div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill ok" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-labels"><span>0%</span><span id="progressPct">0% gastado</span><span>100%</span></div>
+    </div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value" id="statDaily">$0</div><div class="stat-label">Por día</div></div>
+    <div class="stat-card"><div class="stat-value" id="statSpentToday">$0</div><div class="stat-label">Hoy gastado</div></div>
+    <div class="stat-card"><div class="stat-value" id="statDaysLeft">0</div><div class="stat-label">Días restantes</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Bloque actual</div>
+    <div id="blockChips" class="block-chips"></div>
+    <div style="margin-top:10px;font-size:13px;color:var(--muted)">
+      Presupuesto bloque: <strong id="blockBudget" style="color:var(--text)">$0</strong>
+      &nbsp;·&nbsp; Gastado: <strong id="blockSpent" style="color:var(--text)">$0</strong>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Gastos de hoy</div>
+    <div id="todayList"><div class="empty-state"><div class="empty-icon">🧾</div>Sin gastos hoy</div></div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="page" id="page-history">
+  <div id="historyList"><div class="empty-state"><div class="empty-icon">📋</div>Sin gastos registrados</div></div>
+</div>
+
+<!-- ANALYSIS -->
+<div class="page" id="page-analysis">
+  <div class="card">
+    <div class="card-title">Gasto por categoría — período actual</div>
+    <div id="catAnalysis"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Totales</div>
+    <div id="analysisTotals"></div>
+  </div>
+</div>
+
+<!-- PERIODS -->
+<div class="page" id="page-periods">
+  <div id="periodListView">
+    <div class="card">
+      <div class="card-title">Períodos cargados</div>
+      <div id="periodList"></div>
+    </div>
+    <button class="submit-btn" onclick="startForm()">+ Agregar período</button>
+  </div>
+  <div id="periodForm" style="display:none">
+    <div class="card">
+      <div class="card-title">Nuevo período</div>
+      <div class="pf-row">
+        <span class="pf-label">Mes</span>
+        <select class="pf-select" id="pfMes" onchange="pfCheck()"><option value="">Seleccioná...</option></select>
+      </div>
+      <div class="pf-row">
+        <span class="pf-label">Año</span>
+        <select class="pf-select" id="pfAnio" onchange="pfCheck()"><option value="">Seleccioná...</option></select>
+      </div>
+      <div class="pf-row">
+        <span class="pf-label">Presupuesto</span>
+        <input type="number" class="pf-input" id="pfLibre" placeholder="Ej: 520000" inputmode="numeric" oninput="pfCheck()">
+      </div>
+      <div class="pf-row">
+        <span class="pf-label">Fecha inicio</span>
+        <input type="date" class="pf-input" id="pfStart" oninput="pfCheck()">
+      </div>
+      <div class="pf-row">
+        <span class="pf-label">Próximo sueldo</span>
+        <input type="date" class="pf-input" id="pfNextPayday" oninput="pfCheck()">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button onclick="cancelForm()" style="flex:0 0 auto;padding:14px 20px;background:var(--border);border:none;border-radius:12px;color:var(--text);font-size:15px;cursor:pointer">Cancelar</button>
+        <button class="submit-btn" id="pfSaveBtn" onclick="savePeriod()" disabled style="margin-top:0">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="card">
+    <div class="card-title">Datos</div>
+    <div class="settings-row">
+      <span style="color:var(--red)">Borrar todos los gastos</span>
+      <button onclick="clearExpenses()" style="background:var(--red);border:none;color:white;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer">Borrar</button>
+    </div>
+    <div class="settings-row">
+      <span style="color:var(--red)">Borrar todos los períodos</span>
+      <button onclick="clearPeriods()" style="background:var(--red);border:none;color:white;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer">Borrar</button>
+    </div>
+  </div>
+</div>
+
+<button class="add-btn" onclick="openModal()">+</button>
+
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nuevo gasto</div>
+    <div class="form-group">
+      <label class="form-label">Monto</label>
+      <input type="number" class="amount-input" id="inputAmount" placeholder="0" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Concepto</label>
+      <input type="text" class="text-input" id="inputConcept" placeholder="Ej: almuerzo, detergente...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Categoría</label>
+      <div class="cat-grid">
+        <div class="cat-pill" onclick="selectCat('comida')" id="cat-comida"><span class="cat-icon">🍽️</span>comida</div>
+        <div class="cat-pill" onclick="selectCat('gusto')" id="cat-gusto"><span class="cat-icon">🎉</span>gusto</div>
+        <div class="cat-pill" onclick="selectCat('limpieza')" id="cat-limpieza"><span class="cat-icon">🧹</span>limpieza</div>
+        <div class="cat-pill" onclick="selectCat('casa')" id="cat-casa"><span class="cat-icon">🏠</span>casa</div>
+        <div class="cat-pill" onclick="selectCat('perro')" id="cat-perro"><span class="cat-icon">🐕</span>perro</div>
+      </div>
+    </div>
+    <button class="submit-btn" id="submitBtn" onclick="addExpense()" disabled>Registrar gasto</button>
+  </div>
+</div>
+
+<script>
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const CAT_COLORS = { comida:'#4f8ef7', gusto:'#e74c3c', limpieza:'#2ecc71', casa:'#f39c12', perro:'#9b59b6' };
+const CAT_ICONS = { comida:'🍽️', gusto:'🎉', limpieza:'🧹', casa:'🏠', perro:'🐕' };
+
+let periods = JSON.parse(localStorage.getItem('budget_periods') || '[]');
+let activePeriodId = localStorage.getItem('budget_activePeriod') || null;
+let expenses = JSON.parse(localStorage.getItem('budget_expenses') || '[]');
+let selectedCat = null;
+let selectedBlock = null; // null = auto (current block)
+
+function autoSelectPeriod() {
+  const t = today();
+  const match = periods.find(p => t >= p.startDate && t <= p.endDate);
+  if (match) activePeriodId = match.id;
+  else if (periods.length > 0 && !activePeriodId) activePeriodId = periods[periods.length-1].id;
+}
+autoSelectPeriod();
+
+function getActivePeriod() {
+  return periods.find(p => p.id === activePeriodId) || periods[0] || null;
+}
+
+function fmt(n) { return '$' + Math.round(n).toLocaleString('es-AR'); }
+function today() { return new Date().toISOString().slice(0,10); }
+function parseDate(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); }
+function daysBetween(a,b) { return Math.round((parseDate(b)-parseDate(a))/86400000)+1; }
+function daysSince(a) { return Math.round((new Date()-parseDate(a))/86400000); }
+function clamp(v,min,max) { return Math.min(max,Math.max(min,v)); }
+
+function getBlockInfo(p) {
+  const totalDays = daysBetween(p.startDate, p.endDate);
+  const blockSize = Math.ceil(totalDays/4);
+  const elapsed = daysSince(p.startDate);
+  const currentBlock = Math.min(Math.floor(elapsed/blockSize),3);
+  return { totalDays, blockSize, elapsed, currentBlock };
+}
+function getDailyBudget(p) { return p.libre / getBlockInfo(p).totalDays; }
+function getAccumulated(p) {
+  const { elapsed, totalDays } = getBlockInfo(p);
+  const daily = getDailyBudget(p);
+  const days = clamp(elapsed+1, 0, totalDays);
+  const budget = days * daily;
+  const spent = expenses.filter(e => e.date >= p.startDate && e.date <= p.endDate).reduce((s,e)=>s+e.amount,0);
+  return { budget, spent, available: budget-spent };
+}
+function getBlockExpenses(p, blockIdx) {
+  const { blockSize, totalDays } = getBlockInfo(p);
+  const start = new Date(parseDate(p.startDate).getTime() + blockIdx*blockSize*86400000);
+  const end = new Date(parseDate(p.startDate).getTime() + Math.min((blockIdx+1)*blockSize, totalDays)*86400000);
+  const f = d => d.toISOString().slice(0,10);
+  return expenses.filter(e => e.date >= f(start) && e.date < f(end));
+}
+
+// Saldo disponible al final del bloque blockIdx (presupuesto del bloque + carryover - gastos hasta fin del bloque)
+function getBlockSaldo(p, blockIdx) {
+  const { blockSize, totalDays } = getBlockInfo(p);
+  const daily = getDailyBudget(p);
+  const daysUpToBlock = Math.min((blockIdx+1)*blockSize, totalDays);
+  const budgetUpToBlock = daysUpToBlock * daily;
+  const blockEndDate = new Date(parseDate(p.startDate).getTime() + daysUpToBlock*86400000);
+  const f = d => d.toISOString().slice(0,10);
+  const spentUpToBlock = expenses
+    .filter(e => e.date >= p.startDate && e.date < f(blockEndDate))
+    .reduce((s,e)=>s+e.amount, 0);
+  return budgetUpToBlock - spentUpToBlock;
+}
+function saveAll() {
+  localStorage.setItem('budget_periods', JSON.stringify(periods));
+  localStorage.setItem('budget_activePeriod', activePeriodId || '');
+  localStorage.setItem('budget_expenses', JSON.stringify(expenses));
+}
+
+function render() { renderHome(); renderHistory(); renderAnalysis(); renderPeriods(); }
+
+function renderHome() {
+  const p = getActivePeriod();
+  if (!p) { document.getElementById('periodLabel').textContent = 'Sin período — creá uno en Períodos'; document.getElementById('availableAmount').textContent = '—'; return; }
+  const daily = getDailyBudget(p);
+  const { budget, spent, available } = getAccumulated(p);
+  const { elapsed, totalDays, currentBlock, blockSize } = getBlockInfo(p);
+
+  const amountEl = document.getElementById('availableAmount');
+  amountEl.textContent = fmt(available);
+  const pct = budget > 0 ? spent/budget : 0;
+  const cls = pct < 0.7 ? 'ok' : pct < 0.9 ? 'warn' : 'over';
+  amountEl.className = 'budget-amount ' + cls;
+  document.getElementById('availableLabel').textContent = available >= 0 ? 'disponible' : 'excedido';
+
+  const fill = document.getElementById('progressFill');
+  fill.style.width = clamp(pct*100,0,100) + '%';
+  fill.className = 'progress-fill ' + cls;
+  document.getElementById('progressPct').textContent = Math.round(pct*100) + '% gastado';
+
+  // Días restantes = desde mañana hasta fin del período (hoy no cuenta, está en curso)
+  const todayStr = today();
+  const tomorrow = new Date(parseDate(todayStr).getTime() + 86400000).toISOString().slice(0,10);
+  const daysLeft = Math.max(1, daysBetween(tomorrow, p.endDate));
+  // Por día = (presupuesto total - total gastado) / días restantes
+  const totalSpent = expenses.filter(e => e.date >= p.startDate && e.date <= p.endDate).reduce((s,e)=>s+e.amount,0);
+  const dailyRemaining = Math.max(0, p.libre - totalSpent) / (daysLeft + 1); // +1 por hoy que está en curso
+  document.getElementById('statDaily').textContent = fmt(dailyRemaining);
+  const todaySpent = expenses.filter(e=>e.date===todayStr).reduce((s,e)=>s+e.amount,0);
+  document.getElementById('statSpentToday').textContent = fmt(todaySpent);
+  document.getElementById('statDaysLeft').textContent = daysLeft;
+
+  const opts = {day:'numeric',month:'short'};
+  document.getElementById('periodLabel').textContent =
+    p.label + ' · ' + parseDate(p.startDate).toLocaleDateString('es-AR',opts) + ' → ' + parseDate(p.endDate).toLocaleDateString('es-AR',opts);
+
+  // Bloque seleccionado (o actual por defecto)
+  if (selectedBlock === null) selectedBlock = currentBlock;
+  const viewBlock = selectedBlock;
+
+  const chips = document.getElementById('blockChips');
+  chips.innerHTML = '';
+  for (let i=0; i<4; i++) {
+    const c = document.createElement('div');
+    const classes = ['block-chip'];
+    if (i === currentBlock) classes.push('current');
+    if (i === viewBlock) classes.push('selected');
+    c.className = classes.join(' ');
+    const bs = i*blockSize;
+    const d1 = new Date(parseDate(p.startDate).getTime()+bs*86400000);
+    const d2 = new Date(parseDate(p.startDate).getTime()+(Math.min(bs+blockSize,totalDays)-1)*86400000);
+    c.textContent = `${i+1}° (${d1.getDate()}/${d1.getMonth()+1}–${d2.getDate()}/${d2.getMonth()+1})`;
+    c.onclick = () => { selectedBlock = i; renderHome(); };
+    chips.appendChild(c);
+  }
+
+  const blockSaldo = getBlockSaldo(p, viewBlock);
+  const blockExps = getBlockExpenses(p, viewBlock);
+  document.getElementById('blockBudget').textContent = fmt(blockSaldo);
+  document.getElementById('blockSpent').textContent = fmt(blockExps.reduce((s,e)=>s+e.amount,0));
+
+  const todayExps = expenses.filter(e=>e.date===todayStr).sort((a,b)=>b.ts-a.ts);
+  document.getElementById('todayList').innerHTML = todayExps.length === 0
+    ? '<div class="empty-state"><div class="empty-icon">🧾</div>Sin gastos hoy</div>'
+    : todayExps.map(expenseHTML).join('');
+}
+
+function expenseHTML(e) {
+  return `<div class="expense-item">
+    <div class="exp-icon" style="background:${CAT_COLORS[e.cat]}22">${CAT_ICONS[e.cat]}</div>
+    <div class="exp-info">
+      <div class="exp-concept">${e.concept||e.cat}</div>
+      <div class="exp-meta">${e.cat} · ${formatDate(e.date)}</div>
+    </div>
+    <div class="exp-amount">${fmt(e.amount)}</div>
+    <button class="exp-delete" onclick="deleteExpense('${e.id}')">✕</button>
+  </div>`;
+}
+function formatDate(d) { return parseDate(d).toLocaleDateString('es-AR',{day:'numeric',month:'short'}); }
+
+function renderHistory() {
+  const sorted = [...expenses].sort((a,b)=>b.ts-a.ts);
+  const hist = document.getElementById('historyList');
+  if (!sorted.length) { hist.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div>Sin gastos registrados</div>'; return; }
+  const groups = {};
+  sorted.forEach(e=>{ if(!groups[e.date]) groups[e.date]=[]; groups[e.date].push(e); });
+  hist.innerHTML = Object.entries(groups).map(([date,exps])=>{
+    const total = exps.reduce((s,e)=>s+e.amount,0);
+    return `<div class="date-group-label">${formatDate(date)} — ${fmt(total)}</div><div class="card" style="padding:8px 16px">${exps.map(expenseHTML).join('')}</div>`;
+  }).join('');
+}
+
+function renderAnalysis() {
+  const p = getActivePeriod();
+  if (!p) return;
+  const periodExps = expenses.filter(e=>e.date>=p.startDate&&e.date<=p.endDate);
+  const total = periodExps.reduce((s,e)=>s+e.amount,0);
+  const bycat = {};
+  ['comida','gusto','limpieza','casa','perro'].forEach(c=>bycat[c]=0);
+  periodExps.forEach(e=>{ bycat[e.cat]=(bycat[e.cat]||0)+e.amount; });
+  const catEl = document.getElementById('catAnalysis');
+  catEl.innerHTML = total === 0
+    ? '<div class="empty-state" style="padding:20px 0"><div class="empty-icon">📊</div>Sin datos aún</div>'
+    : Object.entries(bycat).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>{
+        const pct = total > 0 ? (amt/total)*100 : 0;
+        return `<div class="cat-bar-row"><div class="cat-bar-header"><span>${CAT_ICONS[cat]} ${cat}</span><span>${fmt(amt)} <span style="color:var(--muted);font-size:11px">${Math.round(pct)}%</span></span></div><div class="cat-bar-track"><div class="cat-bar-fill" style="width:${pct}%;background:${CAT_COLORS[cat]}"></div></div></div>`;
+      }).join('');
+  const { budget, spent, available } = getAccumulated(p);
+  document.getElementById('analysisTotals').innerHTML = `
+    <div class="settings-row"><span>Presupuesto acumulado</span><strong>${fmt(budget)}</strong></div>
+    <div class="settings-row"><span>Total gastado</span><strong>${fmt(spent)}</strong></div>
+    <div class="settings-row"><span>Disponible</span><strong style="color:${available>=0?'var(--green)':'var(--red)'}">${fmt(available)}</strong></div>
+    <div class="settings-row"><span>Gastos registrados</span><strong>${periodExps.length}</strong></div>`;
+}
+
+function renderPeriods() {
+  const list = document.getElementById('periodList');
+  if (!periods.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:20px 0"><div class="empty-icon">📅</div>Sin períodos cargados</div>';
+    return;
+  }
+  list.innerHTML = [...periods].reverse().map(p => {
+    const isActive = p.id === activePeriodId;
+    const opts = {day:'numeric',month:'short'};
+    return `<div class="period-item" onclick="selectPeriod('${p.id}')">
+      <div class="period-dot ${isActive?'active':''}"></div>
+      <div class="period-info">
+        <div class="period-name">${p.label}</div>
+        <div class="period-dates">${parseDate(p.startDate).toLocaleDateString('es-AR',opts)} → ${parseDate(p.endDate).toLocaleDateString('es-AR',opts)} · ${fmt(p.libre)} libre</div>
+      </div>
+      ${isActive ? '<span class="period-badge">activo</span>' : ''}
+      <button class="period-delete-btn" onclick="deletePeriod(event,'${p.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function selectPeriod(id) { activePeriodId = id; selectedBlock = null; saveAll(); render(); }
+function deletePeriod(ev, id) {
+  ev.stopPropagation();
+  if (!confirm('¿Eliminar este período?')) return;
+  periods = periods.filter(p=>p.id!==id);
+  if (activePeriodId === id) activePeriodId = periods.length ? periods[periods.length-1].id : null;
+  saveAll(); render();
+}
+
+function startForm() {
+  document.getElementById('periodListView').style.display = 'none';
+  document.getElementById('periodForm').style.display = 'block';
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const mesEl = document.getElementById('pfMes');
+  mesEl.innerHTML = '<option value="">Seleccioná...</option>' +
+    MONTHS.map((m,i) => `<option value="${i+1}">${m}</option>`).join('');
+  mesEl.value = month + 1;
+
+  const anioEl = document.getElementById('pfAnio');
+  anioEl.innerHTML = '<option value="">Seleccioná...</option>' +
+    [year, year+1].map(y => `<option value="${y}">${y}</option>`).join('');
+  anioEl.value = year;
+
+  const startDefault = `${year}-${String(month+1).padStart(2,'0')}-01`;
+  const nextMonth = month === 11 ? 0 : month + 1;
+  const nextYear = month === 11 ? year + 1 : year;
+  const nextPaydayDefault = `${nextYear}-${String(nextMonth+1).padStart(2,'0')}-05`;
+
+  document.getElementById('pfStart').value = startDefault;
+  document.getElementById('pfNextPayday').value = nextPaydayDefault;
+  document.getElementById('pfLibre').value = '';
+  pfCheck();
+}
+
+function cancelForm() {
+  document.getElementById('periodForm').style.display = 'none';
+  document.getElementById('periodListView').style.display = 'block';
+}
+
+function pfCheck() {
+  const mes = document.getElementById('pfMes').value;
+  const anio = document.getElementById('pfAnio').value;
+  const libre = parseFloat(document.getElementById('pfLibre').value);
+  const start = document.getElementById('pfStart').value;
+  const nextPayday = document.getElementById('pfNextPayday').value;
+  document.getElementById('pfSaveBtn').disabled = !(mes && anio && libre > 0 && start && nextPayday && nextPayday > start);
+}
+
+function savePeriod() {
+  const mesNum = parseInt(document.getElementById('pfMes').value);
+  const anio = parseInt(document.getElementById('pfAnio').value);
+  const libre = parseFloat(document.getElementById('pfLibre').value);
+  const startDate = document.getElementById('pfStart').value;
+  const nextPayday = document.getElementById('pfNextPayday').value;
+  // endDate = día anterior al próximo sueldo
+  const endDateObj = new Date(parseDate(nextPayday).getTime() - 86400000);
+  const endDate = endDateObj.toISOString().slice(0,10);
+  periods.push({ id: 'p_' + Date.now(), label: MONTHS[mesNum-1] + ' ' + anio, startDate, endDate, nextPayday, libre });
+  activePeriodId = periods[periods.length-1].id;
+  saveAll(); cancelForm(); render();
+}
+
+function showTab(tab) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('page-'+tab).classList.add('active');
+  render();
+}
+
+function openModal() {
+  if (!getActivePeriod()) { alert('Primero creá un período en la pestaña Períodos'); return; }
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('inputAmount').focus();
+  selectedCat = null;
+  document.querySelectorAll('.cat-pill').forEach(p=>p.classList.remove('selected'));
+  document.getElementById('inputAmount').value = '';
+  document.getElementById('inputConcept').value = '';
+  document.getElementById('submitBtn').disabled = true;
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function handleOverlayClick(e) { if (e.target===document.getElementById('modalOverlay')) closeModal(); }
+
+function selectCat(cat) {
+  selectedCat = cat;
+  document.querySelectorAll('.cat-pill').forEach(p=>p.classList.remove('selected'));
+  document.getElementById('cat-'+cat).classList.add('selected');
+  checkSubmit();
+}
+function checkSubmit() {
+  const amt = parseFloat(document.getElementById('inputAmount').value);
+  document.getElementById('submitBtn').disabled = !(amt>0 && selectedCat);
+}
+document.getElementById('inputAmount').addEventListener('input', checkSubmit);
+
+function addExpense() {
+  const amt = parseFloat(document.getElementById('inputAmount').value);
+  const concept = document.getElementById('inputConcept').value.trim();
+  if (!amt || !selectedCat) return;
+  expenses.push({ id: Date.now().toString(), ts: Date.now(), date: today(), amount: amt, concept, cat: selectedCat });
+  saveAll(); closeModal(); render();
+}
+function deleteExpense(id) {
+  if (!confirm('¿Eliminar este gasto?')) return;
+  expenses = expenses.filter(e=>e.id!==id);
+  saveAll(); render();
+}
+function clearExpenses() {
+  if (!confirm('¿Borrar TODOS los gastos?')) return;
+  expenses = []; saveAll(); render();
+}
+function clearPeriods() {
+  if (!confirm('¿Borrar TODOS los períodos?')) return;
+  periods = []; activePeriodId = null; saveAll(); render();
+}
+
+render();
+</script>
+</body>
+</html>
