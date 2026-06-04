@@ -48,8 +48,11 @@
 
     .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
     .stat-card { background: var(--card); border-radius: 12px; padding: 12px 8px; text-align: center; border: 1px solid var(--border); }
+    .stat-card.block { background: #0e2340; border-color: #1e4070; }
     .stat-value { font-size: 16px; font-weight: 700; }
     .stat-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .stat-card.block .stat-label { color: #5b9bd5; }
+    .block-row-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #5b9bd5; margin-bottom: 4px; padding-left: 2px; }
 
     .add-btn { position: fixed; bottom: 88px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--accent); border: none; color: white; font-size: 28px; cursor: pointer; box-shadow: 0 4px 20px rgba(79,142,247,0.4); display: flex; align-items: center; justify-content: center; z-index: 200; transition: transform 0.15s; }
     .add-btn:active { transform: scale(0.93); }
@@ -160,6 +163,12 @@
     <div class="stat-card"><div class="stat-value" id="statSpentToday">$0</div><div class="stat-label">Hoy gastado</div></div>
     <div class="stat-card"><div class="stat-value" id="statDaysLeft">0</div><div class="stat-label">Días restantes</div></div>
   </div>
+  <div class="block-row-label">Bloque actual</div>
+  <div class="stats-row">
+    <div class="stat-card block"><div class="stat-value" id="statBlockDaily">$0</div><div class="stat-label">Por día bloque</div></div>
+    <div class="stat-card block"><div class="stat-value" id="statBlockSpent">$0</div><div class="stat-label">Gastado bloque</div></div>
+    <div class="stat-card block"><div class="stat-value" id="statBlockDaysLeft">0</div><div class="stat-label">Días rest. bloque</div></div>
+  </div>
   <div class="card">
     <div class="card-title">Bloque actual</div>
     <div id="blockChips" class="block-chips"></div>
@@ -168,6 +177,22 @@
       &nbsp;·&nbsp; Gastado: <strong id="blockSpent" style="color:var(--text)">$0</strong>
     </div>
   </div>
+  <div class="card">
+    <div class="card-title">Período actual</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
+      <span style="font-size:13px;color:var(--muted)">Presupuesto</span>
+      <strong id="periodTotalBudget" style="font-size:15px">$0</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border)">
+      <span style="font-size:13px;color:var(--muted)">Gastado total</span>
+      <strong id="periodTotalSpent" style="font-size:15px;color:var(--red)">$0</strong>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border)">
+      <span style="font-size:13px;color:var(--muted)">Disponible</span>
+      <strong id="periodTotalAvailable" style="font-size:15px">$0</strong>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-title">Gastos de hoy</div>
     <div id="todayList"><div class="empty-state"><div class="empty-icon">🧾</div>Sin gastos hoy</div></div>
@@ -301,7 +326,7 @@ function fmt(n) { return '$' + Math.round(n).toLocaleString('es-AR'); }
 function today() { return new Date().toISOString().slice(0,10); }
 function parseDate(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); }
 function daysBetween(a,b) { return Math.round((parseDate(b)-parseDate(a))/86400000)+1; }
-function daysSince(a) { return Math.round((new Date()-parseDate(a))/86400000); }
+function daysSince(a) { return Math.round((parseDate(today())-parseDate(a))/86400000); }
 function clamp(v,min,max) { return Math.min(max,Math.max(min,v)); }
 
 function getBlockInfo(p) {
@@ -379,6 +404,25 @@ function renderHome() {
   const todaySpent = expenses.filter(e=>e.date===todayStr).reduce((s,e)=>s+e.amount,0);
   document.getElementById('statSpentToday').textContent = fmt(todaySpent);
   document.getElementById('statDaysLeft').textContent = daysLeft;
+
+  // --- Fila bloque actual ---
+  const blockLastDayOffset = Math.min((currentBlock+1)*blockSize, totalDays) - 1;
+  const blockLastDay = new Date(parseDate(p.startDate).getTime() + blockLastDayOffset*86400000).toISOString().slice(0,10);
+  const blockDaysLeft = Math.max(0, daysBetween(tomorrow, blockLastDay));
+  const blockAvailable = getBlockSaldo(p, currentBlock);
+  const blockSpentAmt = getBlockExpenses(p, currentBlock).reduce((s,e)=>s+e.amount,0);
+  const blockDailyRemaining = blockDaysLeft + 1 > 0 ? Math.max(0, blockAvailable) / (blockDaysLeft + 1) : 0;
+  document.getElementById('statBlockDaily').textContent = fmt(blockDailyRemaining);
+  document.getElementById('statBlockSpent').textContent = fmt(blockSpentAmt);
+  document.getElementById('statBlockDaysLeft').textContent = blockDaysLeft;
+
+  // --- Período actual ---
+  const periodSpent = expenses.filter(e=>e.date>=p.startDate&&e.date<=p.endDate).reduce((s,e)=>s+e.amount,0);
+  const periodAvail = p.libre - periodSpent;
+  document.getElementById('periodTotalBudget').textContent = fmt(p.libre);
+  document.getElementById('periodTotalSpent').textContent = fmt(periodSpent);
+  document.getElementById('periodTotalAvailable').textContent = fmt(periodAvail);
+  document.getElementById('periodTotalAvailable').style.color = periodAvail >= 0 ? 'var(--green)' : 'var(--red)';
 
   const opts = {day:'numeric',month:'short'};
   document.getElementById('periodLabel').textContent =
