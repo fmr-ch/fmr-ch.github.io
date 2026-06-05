@@ -4,595 +4,617 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#1a1a2e">
-  <title>Presupuesto Diario</title>
+  <meta name="theme-color" content="#0f0f1a">
+  <title>Stock</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     :root {
-      --bg: #0f0f1a; --card: #1a1a2e; --card2: #16213e;
-      --accent: #4f8ef7; --green: #2ecc71; --yellow: #f39c12; --red: #e74c3c;
-      --text: #f0f0f0; --muted: #8888aa; --border: #2a2a4a;
+      --bg:#0f0f1a; --card:#1a1a2e; --card2:#16213e;
+      --accent:#4f8ef7; --green:#2ecc71; --yellow:#f39c12; --red:#e74c3c; --purple:#9b59b6;
+      --text:#f0f0f0; --muted:#8888aa; --border:#2a2a4a;
     }
-    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; padding-bottom: 80px; }
+    body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; min-height:100vh; padding-bottom:80px; }
 
-    .header { background: var(--card); padding: 16px 20px 12px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border); }
-    .header-top { display: flex; justify-content: space-between; align-items: center; }
-    .header h1 { font-size: 18px; font-weight: 700; }
-    .header .period { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .header { background:var(--card); padding:16px 20px 12px; position:sticky; top:0; z-index:100; border-bottom:1px solid var(--border); }
+    .header h1 { font-size:18px; font-weight:700; }
+    .header-sub { font-size:12px; color:var(--muted); margin-top:2px; }
 
-    .tabs { display: flex; background: var(--card); border-bottom: 1px solid var(--border); position: sticky; top: 61px; z-index: 99; overflow-x: auto; }
-    .tab { flex: 1; min-width: 60px; padding: 10px 6px; text-align: center; font-size: 12px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; white-space: nowrap; }
-    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tabs { display:flex; background:var(--card); border-bottom:1px solid var(--border); position:sticky; top:61px; z-index:99; }
+    .tab { flex:1; padding:10px 6px; text-align:center; font-size:12px; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s; white-space:nowrap; }
+    .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
 
-    .page { display: none; padding: 16px; }
-    .page.active { display: block; }
+    .page { display:none; padding:16px; }
+    .page.active { display:block; }
 
-    .card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); }
-    .card-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+    .card { background:var(--card); border-radius:16px; padding:16px; margin-bottom:12px; border:1px solid var(--border); }
+    .card-title { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:10px; }
 
-    .budget-main { text-align: center; padding: 8px 0 4px; }
-    .budget-amount { font-size: 42px; font-weight: 800; line-height: 1; }
-    .budget-amount.ok { color: var(--green); }
-    .budget-amount.warn { color: var(--yellow); }
-    .budget-amount.over { color: var(--red); }
-    .budget-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+    /* FILTER CHIPS */
+    .filter-bar { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:14px; scrollbar-width:none; }
+    .filter-bar::-webkit-scrollbar { display:none; }
+    .filter-chip { flex-shrink:0; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600; border:1.5px solid var(--border); color:var(--muted); background:var(--card); cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+    .filter-chip.active { border-color:var(--accent); background:rgba(79,142,247,0.15); color:var(--accent); }
 
-    .progress-wrap { margin: 12px 0 4px; }
-    .progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
-    .progress-fill.ok { background: var(--green); }
-    .progress-fill.warn { background: var(--yellow); }
-    .progress-fill.over { background: var(--red); }
-    .progress-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; }
+    /* STOCK ITEM */
+    .stock-item { display:flex; align-items:center; padding:12px 0; border-bottom:1px solid var(--border); cursor:pointer; }
+    .stock-item:last-child { border-bottom:none; }
+    .stock-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; margin-right:12px; }
+    .dot-ok  { background:var(--green); box-shadow:0 0 6px var(--green); }
+    .dot-low { background:var(--yellow); box-shadow:0 0 6px var(--yellow); }
+    .dot-out { background:var(--red); box-shadow:0 0 6px var(--red); }
+    .stock-info { flex:1; min-width:0; }
+    .stock-name { font-size:14px; font-weight:600; }
+    .stock-meta { font-size:11px; color:var(--muted); margin-top:2px; }
+    .stock-qty { text-align:right; flex-shrink:0; }
+    .qty-main { font-size:15px; font-weight:700; }
+    .qty-unit { font-size:10px; color:var(--muted); }
 
-    .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-    .stat-card { background: var(--card); border-radius: 12px; padding: 12px 8px; text-align: center; border: 1px solid var(--border); }
-    .stat-card.block { background: #0e2340; border-color: #1e4070; }
-    .stat-value { font-size: 16px; font-weight: 700; }
-    .stat-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
-    .stat-card.block .stat-label { color: #5b9bd5; }
-    .block-row-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #5b9bd5; margin-bottom: 4px; padding-left: 2px; }
+    .cat-header { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--accent); padding:8px 0 4px; font-weight:700; }
 
-    .add-btn { position: fixed; bottom: 88px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--accent); border: none; color: white; font-size: 28px; cursor: pointer; box-shadow: 0 4px 20px rgba(79,142,247,0.4); display: flex; align-items: center; justify-content: center; z-index: 200; transition: transform 0.15s; }
-    .add-btn:active { transform: scale(0.93); }
+    .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; }
+    .badge-red    { background:rgba(231,76,60,0.2);  color:var(--red); }
+    .badge-yellow { background:rgba(243,156,18,0.2); color:var(--yellow); }
+    .badge-green  { background:rgba(46,204,113,0.2); color:var(--green); }
 
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 300; align-items: flex-end; }
-    .modal-overlay.open { display: flex; }
-    .modal { background: var(--card2); border-radius: 24px 24px 0 0; padding: 24px 20px 40px; width: 100%; max-height: 90vh; overflow-y: auto; animation: slideUp 0.25s ease; }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-    .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
-    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+    .stats-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:12px; }
+    .stat-card { background:var(--card); border-radius:12px; padding:12px 8px; text-align:center; border:1px solid var(--border); }
+    .stat-value { font-size:20px; font-weight:800; }
+    .stat-value.red    { color:var(--red); }
+    .stat-value.yellow { color:var(--yellow); }
+    .stat-value.green  { color:var(--green); }
+    .stat-label { font-size:10px; color:var(--muted); margin-top:2px; }
 
-    .form-group { margin-bottom: 16px; }
-    .form-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: block; }
-    .amount-input { width: 100%; background: var(--bg); border: 2px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text); font-size: 28px; font-weight: 700; text-align: center; outline: none; transition: border-color 0.2s; }
-    .amount-input:focus { border-color: var(--accent); }
-    .text-input { width: 100%; background: var(--bg); border: 2px solid var(--border); border-radius: 12px; padding: 12px 16px; color: var(--text); font-size: 16px; outline: none; transition: border-color 0.2s; }
-    .text-input:focus { border-color: var(--accent); }
+    .mov-item { display:flex; align-items:center; padding:12px 0; border-bottom:1px solid var(--border); }
+    .mov-item:last-child { border-bottom:none; }
+    .mov-badge { padding:4px 10px; border-radius:8px; font-size:11px; font-weight:700; flex-shrink:0; margin-right:12px; }
+    .mov-compra { background:rgba(46,204,113,0.2); color:var(--green); }
+    .mov-uso    { background:rgba(243,156,18,0.2);  color:var(--yellow); }
+    .mov-info { flex:1; }
+    .mov-name { font-size:14px; font-weight:600; }
+    .mov-meta { font-size:11px; color:var(--muted); margin-top:2px; }
+    .mov-right { text-align:right; flex-shrink:0; }
+    .mov-qty   { font-size:14px; font-weight:700; }
+    .mov-price { font-size:11px; color:var(--muted); }
+    .mov-delete { background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:4px 0 4px 8px; }
 
-    .cat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-    .cat-pill { padding: 10px 8px; border-radius: 10px; border: 2px solid var(--border); background: var(--bg); color: var(--muted); font-size: 13px; text-align: center; cursor: pointer; transition: all 0.15s; }
-    .cat-pill.selected { border-color: var(--accent); background: rgba(79,142,247,0.15); color: var(--text); }
-    .cat-pill .cat-icon { font-size: 20px; display: block; margin-bottom: 2px; }
+    .add-btn { position:fixed; bottom:88px; right:20px; width:56px; height:56px; border-radius:50%; background:var(--accent); border:none; color:white; font-size:28px; cursor:pointer; box-shadow:0 4px 20px rgba(79,142,247,0.4); display:flex; align-items:center; justify-content:center; z-index:200; transition:transform 0.15s; }
+    .add-btn:active { transform:scale(0.93); }
 
-    .submit-btn { width: 100%; padding: 16px; background: var(--accent); border: none; border-radius: 14px; color: white; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: opacity 0.2s; }
-    .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:300; align-items:flex-end; }
+    .modal-overlay.open { display:flex; }
+    .modal { background:var(--card2); border-radius:24px 24px 0 0; padding:24px 20px 40px; width:100%; max-height:92vh; overflow-y:auto; animation:slideUp 0.25s ease; }
+    @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+    .modal-handle { width:40px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 20px; }
+    .modal-title  { font-size:18px; font-weight:700; margin-bottom:20px; }
 
-    .expense-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
-    .expense-item:last-child { border-bottom: none; }
-    .exp-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; margin-right: 12px; }
-    .exp-info { flex: 1; min-width: 0; }
-    .exp-concept { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .exp-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .exp-amount { font-size: 15px; font-weight: 700; flex-shrink: 0; }
-    .exp-delete { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px 0 4px 8px; }
+    .form-group { margin-bottom:16px; }
+    .form-label { font-size:12px; color:var(--muted); margin-bottom:6px; display:block; }
+    .form-input { width:100%; background:var(--bg); border:2px solid var(--border); border-radius:12px; padding:12px 16px; color:var(--text); font-size:16px; outline:none; transition:border-color 0.2s; appearance:none; }
+    .form-input:focus { border-color:var(--accent); }
+    .form-input.big { font-size:26px; font-weight:700; text-align:center; }
+    .form-input[type=number]::-webkit-inner-spin-button { display:none; }
 
-    .cat-bar-row { margin-bottom: 12px; }
-    .cat-bar-header { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 13px; }
-    .cat-bar-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
-    .cat-bar-fill { height: 100%; border-radius: 3px; }
+    .type-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+    .type-btn { padding:14px; border-radius:12px; border:2px solid var(--border); background:var(--bg); color:var(--muted); font-size:14px; font-weight:700; text-align:center; cursor:pointer; transition:all 0.15s; }
+    .type-btn.selected-compra { border-color:var(--green);  background:rgba(46,204,113,0.15); color:var(--green); }
+    .type-btn.selected-uso    { border-color:var(--yellow); background:rgba(243,156,18,0.15);  color:var(--yellow); }
 
-    .settings-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
-    .settings-row:last-child { border-bottom: none; }
+    .submit-btn { width:100%; padding:16px; background:var(--accent); border:none; border-radius:14px; color:white; font-size:16px; font-weight:700; cursor:pointer; margin-top:8px; transition:opacity 0.2s; }
+    .submit-btn:disabled { opacity:0.4; cursor:not-allowed; }
 
-    .date-group-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; padding: 8px 0 4px; }
+    .item-manage { display:flex; align-items:center; padding:12px 0; border-bottom:1px solid var(--border); }
+    .item-manage:last-child { border-bottom:none; }
+    .item-manage-info { flex:1; }
+    .item-manage-name { font-size:14px; font-weight:600; }
+    .item-manage-meta { font-size:11px; color:var(--muted); margin-top:2px; }
+    .item-edit-btn { background:none; border:1px solid var(--border); color:var(--muted); padding:5px 10px; border-radius:8px; font-size:12px; cursor:pointer; margin-right:6px; }
+    .item-del-btn  { background:none; border:none; color:var(--red); font-size:18px; cursor:pointer; }
 
-    .empty-state { text-align: center; color: var(--muted); padding: 40px 0; font-size: 14px; }
-    .empty-state .empty-icon { font-size: 40px; margin-bottom: 8px; }
+    .empty-state { text-align:center; color:var(--muted); padding:40px 0; font-size:14px; }
+    .empty-icon  { font-size:40px; margin-bottom:8px; }
 
-    .block-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-    .block-chip { padding: 6px 12px; border-radius: 20px; font-size: 11px; border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: all 0.15s; }
-    .block-chip:active { transform: scale(0.95); }
-    .block-chip.current { border-color: var(--muted); color: var(--text); }
-    .block-chip.selected { background: rgba(79,142,247,0.2); border-color: var(--accent); color: var(--accent); font-weight: 700; }
-
-    .period-item { display: flex; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
-    .period-item:last-child { border-bottom: none; }
-    .period-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); margin-right: 12px; flex-shrink: 0; }
-    .period-dot.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
-    .period-info { flex: 1; }
-    .period-name { font-size: 15px; font-weight: 600; }
-    .period-dates { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .period-badge { font-size: 11px; padding: 3px 8px; border-radius: 10px; background: rgba(79,142,247,0.2); color: var(--accent); }
-    .period-delete-btn { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px; }
-
-    .pf-row { display: flex; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); gap: 12px; }
-    .pf-row:last-of-type { border-bottom: none; }
-    .pf-label { font-size: 14px; color: var(--muted); width: 110px; flex-shrink: 0; }
-    .pf-select, .pf-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-size: 15px; outline: none; appearance: none; cursor: pointer; }
-    .pf-select:focus, .pf-input:focus { border-color: var(--accent); }
-    .pf-input[type=number] { -moz-appearance: textfield; }
-    .pf-input[type=number]::-webkit-inner-spin-button { display: none; }
+    /* NUEVA CATEGORÍA inline */
+    .new-cat-row { display:flex; gap:8px; margin-top:8px; }
+    .new-cat-input { flex:1; background:var(--bg); border:2px solid var(--accent); border-radius:10px; padding:10px 12px; color:var(--text); font-size:15px; outline:none; }
+    .new-cat-confirm { background:var(--accent); border:none; border-radius:10px; color:white; padding:10px 16px; font-size:14px; font-weight:700; cursor:pointer; }
   </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="header-top">
-    <div>
-      <h1>💰 Presupuesto</h1>
-      <div class="period" id="periodLabel">Cargando...</div>
-    </div>
-  </div>
+  <h1>🛒 Control de Stock</h1>
+  <div class="header-sub" id="headerSub">Cargando...</div>
 </div>
 
 <div class="tabs">
-  <div class="tab active" onclick="showTab('home')" id="tab-home">Hoy</div>
-  <div class="tab" onclick="showTab('history')" id="tab-history">Historial</div>
-  <div class="tab" onclick="showTab('analysis')" id="tab-analysis">Análisis</div>
-  <div class="tab" onclick="showTab('periods')" id="tab-periods">Períodos</div>
-  <div class="tab" onclick="showTab('settings')" id="tab-settings">Config</div>
+  <div class="tab active" onclick="showTab('comprar')"  id="tab-comprar">Comprar</div>
+  <div class="tab"        onclick="showTab('stock')"    id="tab-stock">Stock</div>
+  <div class="tab"        onclick="showTab('historial')" id="tab-historial">Historial</div>
+  <div class="tab"        onclick="showTab('items')"    id="tab-items">Items</div>
 </div>
 
-<!-- HOME -->
-<div class="page active" id="page-home">
-  <div class="card">
-    <div class="card-title">Disponible</div>
-    <div class="budget-main">
-      <div class="budget-amount ok" id="availableAmount">$0</div>
-      <div class="budget-label" id="availableLabel">—</div>
-    </div>
-    <div class="progress-wrap">
-      <div class="progress-bar"><div class="progress-fill ok" id="progressFill" style="width:0%"></div></div>
-      <div class="progress-labels"><span>0%</span><span id="progressPct">0% gastado</span><span>100%</span></div>
-    </div>
-  </div>
+<!-- COMPRAR -->
+<div class="page active" id="page-comprar">
   <div class="stats-row">
-    <div class="stat-card"><div class="stat-value" id="statDaily">$0</div><div class="stat-label">Por día</div></div>
-    <div class="stat-card"><div class="stat-value" id="statSpentToday">$0</div><div class="stat-label">Hoy gastado</div></div>
-    <div class="stat-card"><div class="stat-value" id="statDaysLeft">0</div><div class="stat-label">Días restantes</div></div>
+    <div class="stat-card"><div class="stat-value red"    id="statOut">0</div><div class="stat-label">Sin stock</div></div>
+    <div class="stat-card"><div class="stat-value yellow" id="statLow">0</div><div class="stat-label">Reponer</div></div>
+    <div class="stat-card"><div class="stat-value green"  id="statOk">0</div><div class="stat-label">OK</div></div>
   </div>
-  <div class="block-row-label">Bloque actual</div>
-  <div class="stats-row">
-    <div class="stat-card block"><div class="stat-value" id="statBlockDaily">$0</div><div class="stat-label">Por día bloque</div></div>
-    <div class="stat-card block"><div class="stat-value" id="statBlockSpent">$0</div><div class="stat-label">Gastado bloque</div></div>
-    <div class="stat-card block"><div class="stat-value" id="statBlockDaysLeft">0</div><div class="stat-label">Días rest. bloque</div></div>
-  </div>
+  <div class="filter-bar" id="filterComprar"></div>
   <div class="card">
-    <div class="card-title">Bloque actual</div>
-    <div id="blockChips" class="block-chips"></div>
-    <div style="margin-top:10px;font-size:13px;color:var(--muted)">
-      Presupuesto bloque: <strong id="blockBudget" style="color:var(--text)">$0</strong>
-      &nbsp;·&nbsp; Gastado: <strong id="blockSpent" style="color:var(--text)">$0</strong>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Período actual</div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
-      <span style="font-size:13px;color:var(--muted)">Presupuesto</span>
-      <strong id="periodTotalBudget" style="font-size:15px">$0</strong>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border)">
-      <span style="font-size:13px;color:var(--muted)">Gastado total</span>
-      <strong id="periodTotalSpent" style="font-size:15px;color:var(--red)">$0</strong>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border)">
-      <span style="font-size:13px;color:var(--muted)">Disponible</span>
-      <strong id="periodTotalAvailable" style="font-size:15px">$0</strong>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">Gastos de hoy</div>
-    <div id="todayList"><div class="empty-state"><div class="empty-icon">🧾</div>Sin gastos hoy</div></div>
+    <div class="card-title">Lista de compras</div>
+    <div id="buyList"></div>
   </div>
 </div>
 
-<!-- HISTORY -->
-<div class="page" id="page-history">
-  <div id="historyList"><div class="empty-state"><div class="empty-icon">📋</div>Sin gastos registrados</div></div>
+<!-- STOCK -->
+<div class="page" id="page-stock">
+  <div class="filter-bar" id="filterStock"></div>
+  <div id="stockList"></div>
 </div>
 
-<!-- ANALYSIS -->
-<div class="page" id="page-analysis">
+<!-- HISTORIAL -->
+<div class="page" id="page-historial">
+  <div class="filter-bar" id="filterHistorial"></div>
+  <div id="histList"></div>
+</div>
+
+<!-- ITEMS -->
+<div class="page" id="page-items">
+  <div class="filter-bar" id="filterItems"></div>
+  <button class="submit-btn" onclick="openItemModal()" style="margin-bottom:12px">+ Nuevo item</button>
   <div class="card">
-    <div class="card-title">Gasto por categoría — período actual</div>
-    <div id="catAnalysis"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Totales</div>
-    <div id="analysisTotals"></div>
+    <div class="card-title">Items cargados</div>
+    <div id="itemList"></div>
   </div>
 </div>
 
-<!-- PERIODS -->
-<div class="page" id="page-periods">
-  <div id="periodListView">
-    <div class="card">
-      <div class="card-title">Períodos cargados</div>
-      <div id="periodList"></div>
-    </div>
-    <button class="submit-btn" onclick="startForm()">+ Agregar período</button>
-  </div>
-  <div id="periodForm" style="display:none">
-    <div class="card">
-      <div class="card-title">Nuevo período</div>
-      <div class="pf-row">
-        <span class="pf-label">Mes</span>
-        <select class="pf-select" id="pfMes" onchange="pfCheck()"><option value="">Seleccioná...</option></select>
-      </div>
-      <div class="pf-row">
-        <span class="pf-label">Año</span>
-        <select class="pf-select" id="pfAnio" onchange="pfCheck()"><option value="">Seleccioná...</option></select>
-      </div>
-      <div class="pf-row">
-        <span class="pf-label">Presupuesto</span>
-        <input type="number" class="pf-input" id="pfLibre" placeholder="Ej: 520000" inputmode="numeric" oninput="pfCheck()">
-      </div>
-      <div class="pf-row">
-        <span class="pf-label">Fecha inicio</span>
-        <input type="date" class="pf-input" id="pfStart" oninput="pfCheck()">
-      </div>
-      <div class="pf-row">
-        <span class="pf-label">Próximo sueldo</span>
-        <input type="date" class="pf-input" id="pfNextPayday" oninput="pfCheck()">
-      </div>
-      <div style="display:flex;gap:10px;margin-top:16px">
-        <button onclick="cancelForm()" style="flex:0 0 auto;padding:14px 20px;background:var(--border);border:none;border-radius:12px;color:var(--text);font-size:15px;cursor:pointer">Cancelar</button>
-        <button class="submit-btn" id="pfSaveBtn" onclick="savePeriod()" disabled style="margin-top:0">Guardar</button>
-      </div>
-    </div>
-  </div>
-</div>
+<button class="add-btn" onclick="openMovModal()">+</button>
 
-<!-- SETTINGS -->
-<div class="page" id="page-settings">
-  <div class="card">
-    <div class="card-title">Datos</div>
-    <div class="settings-row">
-      <span style="color:var(--red)">Borrar todos los gastos</span>
-      <button onclick="clearExpenses()" style="background:var(--red);border:none;color:white;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer">Borrar</button>
-    </div>
-    <div class="settings-row">
-      <span style="color:var(--red)">Borrar todos los períodos</span>
-      <button onclick="clearPeriods()" style="background:var(--red);border:none;color:white;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer">Borrar</button>
-    </div>
-  </div>
-</div>
-
-<button class="add-btn" onclick="openModal()">+</button>
-
-<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+<!-- MOVIMIENTO MODAL -->
+<div class="modal-overlay" id="movOverlay" onclick="handleOverlay(event,'movOverlay')">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Nuevo gasto</div>
-    <div class="form-group">
-      <label class="form-label">Monto</label>
-      <input type="number" class="amount-input" id="inputAmount" placeholder="0" inputmode="numeric">
+    <div class="modal-title">Registrar movimiento</div>
+    <div class="type-row">
+      <div class="type-btn" id="btnCompra" onclick="selType('compra')">🛒 Compra</div>
+      <div class="type-btn" id="btnUso"    onclick="selType('uso')">📦 Uso</div>
     </div>
     <div class="form-group">
-      <label class="form-label">Concepto</label>
-      <input type="text" class="text-input" id="inputConcept" placeholder="Ej: almuerzo, detergente...">
+      <label class="form-label">Item</label>
+      <select class="form-input" id="movItem" onchange="movCheck()">
+        <option value="">Seleccioná...</option>
+      </select>
     </div>
+    <div class="form-group">
+      <label class="form-label">Cantidad</label>
+      <input type="number" class="form-input big" id="movQty" placeholder="0" inputmode="decimal" oninput="movCheck()">
+    </div>
+    <div id="priceGroup" class="form-group" style="display:none">
+      <label class="form-label">Precio unitario ($)</label>
+      <input type="number" class="form-input big" id="movPrice" placeholder="0" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notas (opcional)</label>
+      <input type="text" class="form-input" id="movNotes" placeholder="Ej: supermercado, oferta...">
+    </div>
+    <button class="submit-btn" id="movSaveBtn" onclick="saveMov()" disabled>Guardar</button>
+  </div>
+</div>
+
+<!-- ITEM MODAL -->
+<div class="modal-overlay" id="itemOverlay" onclick="handleOverlay(event,'itemOverlay')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="itemModalTitle">Nuevo item</div>
+    <div class="form-group">
+      <label class="form-label">Nombre</label>
+      <input type="text" class="form-input" id="iName" placeholder="Ej: Pechuga de pollo" oninput="itemCheck()">
+    </div>
+
+    <!-- CATEGORÍA con opción de nueva -->
     <div class="form-group">
       <label class="form-label">Categoría</label>
-      <div class="cat-grid">
-        <div class="cat-pill" onclick="selectCat('comida')" id="cat-comida"><span class="cat-icon">🍽️</span>comida</div>
-        <div class="cat-pill" onclick="selectCat('gusto')" id="cat-gusto"><span class="cat-icon">🎉</span>gusto</div>
-        <div class="cat-pill" onclick="selectCat('limpieza')" id="cat-limpieza"><span class="cat-icon">🧹</span>limpieza</div>
-        <div class="cat-pill" onclick="selectCat('casa')" id="cat-casa"><span class="cat-icon">🏠</span>casa</div>
-        <div class="cat-pill" onclick="selectCat('perro')" id="cat-perro"><span class="cat-icon">🐕</span>perro</div>
+      <select class="form-input" id="iCat" onchange="onCatChange()">
+        <option value="">Seleccioná...</option>
+      </select>
+      <div id="newCatRow" class="new-cat-row" style="display:none">
+        <input type="text" class="new-cat-input" id="newCatInput" placeholder="Nombre de la categoría...">
+        <button class="new-cat-confirm" onclick="confirmNewCat()">Agregar</button>
       </div>
     </div>
-    <button class="submit-btn" id="submitBtn" onclick="addExpense()" disabled>Registrar gasto</button>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group">
+        <label class="form-label">Unidad</label>
+        <select class="form-input" id="iUnit">
+          <option>unid</option><option>kg</option><option>g</option><option>litro</option>
+          <option>ml</option><option>paquete</option><option>lata</option><option>pote</option>
+          <option>frasco</option><option>atado</option><option>bolsa</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Stock objetivo</label>
+        <input type="number" class="form-input" id="iTarget" placeholder="0" inputmode="decimal">
+      </div>
+    </div>
+    <input type="hidden" id="iEditId">
+    <button class="submit-btn" id="itemSaveBtn" onclick="saveItem()" disabled>Guardar item</button>
   </div>
 </div>
 
 <script>
-const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const CAT_COLORS = { comida:'#4f8ef7', gusto:'#e74c3c', limpieza:'#2ecc71', casa:'#f39c12', perro:'#9b59b6' };
-const CAT_ICONS = { comida:'🍽️', gusto:'🎉', limpieza:'🧹', casa:'🏠', perro:'🐕' };
+// ── CATEGORÍAS ─────────────────────────────────────────
+const BASE_CATS = ["Comida","Limpieza","Higiene","Perro","Casa"];
+const CAT_ICONS = {"Comida":"🍽️","Limpieza":"🧹","Higiene":"🧴","Perro":"🐕","Casa":"🏠"};
 
-let periods = JSON.parse(localStorage.getItem('budget_periods') || '[]');
-let activePeriodId = localStorage.getItem('budget_activePeriod') || null;
-let expenses = JSON.parse(localStorage.getItem('budget_expenses') || '[]');
-let selectedCat = null;
-let selectedBlock = null; // null = auto (current block)
+// Mapeo de categorías legacy → super-categorías
+const CAT_MAP = {
+  "Proteínas":"Comida","Lácteos":"Comida","Verduras":"Comida",
+  "Frutas":"Comida","Almacén":"Comida","Otro":"Casa"
+};
 
-function autoSelectPeriod() {
-  const t = today();
-  const match = periods.find(p => t >= p.startDate && t <= p.endDate);
-  if (match) activePeriodId = match.id;
-  else if (periods.length > 0 && !activePeriodId) activePeriodId = periods[periods.length-1].id;
-}
-autoSelectPeriod();
-
-function getActivePeriod() {
-  return periods.find(p => p.id === activePeriodId) || periods[0] || null;
+function resolveGroup(cat) {
+  if (BASE_CATS.includes(cat)) return cat;
+  return CAT_MAP[cat] || cat;
 }
 
-function fmt(n) { return '$' + Math.round(n).toLocaleString('es-AR'); }
-function today() { return new Date().toISOString().slice(0,10); }
-function parseDate(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); }
-function daysBetween(a,b) { return Math.round((parseDate(b)-parseDate(a))/86400000)+1; }
-function daysSince(a) { return Math.round((parseDate(today())-parseDate(a))/86400000); }
-function clamp(v,min,max) { return Math.min(max,Math.max(min,v)); }
+function getCustomCats() { return JSON.parse(localStorage.getItem('custom_cats') || '[]'); }
+function saveCustomCats(arr) { localStorage.setItem('custom_cats', JSON.stringify(arr)); }
+function getAllCats() { return [...BASE_CATS, ...getCustomCats()]; }
 
-function getBlockInfo(p) {
-  const totalDays = daysBetween(p.startDate, p.endDate);
-  const blockSize = Math.ceil(totalDays/4);
-  const elapsed = daysSince(p.startDate);
-  const currentBlock = Math.min(Math.floor(elapsed/blockSize),3);
-  return { totalDays, blockSize, elapsed, currentBlock };
-}
-function getDailyBudget(p) { return p.libre / getBlockInfo(p).totalDays; }
-function getAccumulated(p) {
-  const { elapsed, totalDays } = getBlockInfo(p);
-  const daily = getDailyBudget(p);
-  const days = clamp(elapsed+1, 0, totalDays);
-  const budget = days * daily;
-  const spent = expenses.filter(e => e.date >= p.startDate && e.date <= p.endDate).reduce((s,e)=>s+e.amount,0);
-  return { budget, spent, available: budget-spent };
-}
-function getBlockExpenses(p, blockIdx) {
-  const { blockSize, totalDays } = getBlockInfo(p);
-  const start = new Date(parseDate(p.startDate).getTime() + blockIdx*blockSize*86400000);
-  const end = new Date(parseDate(p.startDate).getTime() + Math.min((blockIdx+1)*blockSize, totalDays)*86400000);
-  const f = d => d.toISOString().slice(0,10);
-  return expenses.filter(e => e.date >= f(start) && e.date < f(end));
+// ── ESTADO ─────────────────────────────────────────────
+let items = JSON.parse(localStorage.getItem('stock_items') || '[]');
+let movements = JSON.parse(localStorage.getItem('stock_movements') || '[]');
+let movType = null;
+
+// Filtro activo por pestaña
+const activeFilter = { comprar:'Todos', stock:'Todos', historial:'Todos', items:'Todos' };
+
+// Pre-carga
+if (items.length === 0) {
+  const seed = [
+    ["Comida","Pechuga de pollo","kg",1.5],["Comida","Carne picada","kg",0.7],
+    ["Comida","Churrasco","unid",1],["Comida","Bife","unid",1],
+    ["Comida","Filet de pescado","unid",1],["Comida","Atún en lata","lata",2],
+    ["Comida","Jamón","paquete",1],["Comida","Hamburguesas","unid",2],["Comida","Huevos","unid",12],
+    ["Comida","Yogurt griego","pote",2],["Comida","Yogurt natural","pote",3],
+    ["Comida","Queso crema","pote",1],["Comida","Queso en feta","paquete",1],["Comida","Leche","litro",1],
+    ["Comida","Calabaza","kg",1],["Comida","Papa","kg",1.5],["Comida","Batata","unid",2],
+    ["Comida","Zucchini","unid",1],["Comida","Tomate","unid",6],["Comida","Zanahoria","unid",2],
+    ["Comida","Cebolla","unid",3],["Comida","Espinaca","atado",1],["Comida","Palta","unid",1],
+    ["Comida","Lechuga","unid",1],["Comida","Banana","unid",8],["Comida","Manzana","unid",3],
+    ["Comida","Arroz integral","paquete",1],["Comida","Fideos","paquete",1],
+    ["Comida","Tapa de tarta","unid",1],["Comida","Tostadas integrales","paquete",1],
+    ["Comida","Galletas de arroz","paquete",1],["Comida","Avena","paquete",1],
+    ["Comida","Granola","paquete",1],["Comida","Frutos secos","bolsa",1],
+    ["Comida","Manteca de maní","frasco",1],["Comida","Miel","frasco",1],
+    ["Comida","Pan rallado","paquete",1],["Comida","Aceite","litro",1],
+  ];
+  items = seed.map(([cat,name,unit,target]) => ({
+    id:'i_'+Math.random().toString(36).slice(2),
+    name, cat, unit, target, current:0, lastPrice:0, lastPurchase:null
+  }));
+  saveAll();
 }
 
-// Saldo disponible al final del bloque blockIdx (presupuesto del bloque + carryover - gastos hasta fin del bloque)
-function getBlockSaldo(p, blockIdx) {
-  const { blockSize, totalDays } = getBlockInfo(p);
-  const daily = getDailyBudget(p);
-  const daysUpToBlock = Math.min((blockIdx+1)*blockSize, totalDays);
-  const budgetUpToBlock = daysUpToBlock * daily;
-  const blockEndDate = new Date(parseDate(p.startDate).getTime() + daysUpToBlock*86400000);
-  const f = d => d.toISOString().slice(0,10);
-  const spentUpToBlock = expenses
-    .filter(e => e.date >= p.startDate && e.date < f(blockEndDate))
-    .reduce((s,e)=>s+e.amount, 0);
-  return budgetUpToBlock - spentUpToBlock;
-}
 function saveAll() {
-  localStorage.setItem('budget_periods', JSON.stringify(periods));
-  localStorage.setItem('budget_activePeriod', activePeriodId || '');
-  localStorage.setItem('budget_expenses', JSON.stringify(expenses));
+  localStorage.setItem('stock_items', JSON.stringify(items));
+  localStorage.setItem('stock_movements', JSON.stringify(movements));
 }
 
-function render() { renderHome(); renderHistory(); renderAnalysis(); renderPeriods(); }
-
-function renderHome() {
-  const p = getActivePeriod();
-  if (!p) { document.getElementById('periodLabel').textContent = 'Sin período — creá uno en Períodos'; document.getElementById('availableAmount').textContent = '—'; return; }
-  const daily = getDailyBudget(p);
-  const { budget, spent, available } = getAccumulated(p);
-  const { elapsed, totalDays, currentBlock, blockSize } = getBlockInfo(p);
-
-  const amountEl = document.getElementById('availableAmount');
-  amountEl.textContent = fmt(available);
-  const pct = budget > 0 ? spent/budget : 0;
-  const cls = pct < 0.7 ? 'ok' : pct < 0.9 ? 'warn' : 'over';
-  amountEl.className = 'budget-amount ' + cls;
-  document.getElementById('availableLabel').textContent = available >= 0 ? 'disponible' : 'excedido';
-
-  const fill = document.getElementById('progressFill');
-  fill.style.width = clamp(pct*100,0,100) + '%';
-  fill.className = 'progress-fill ' + cls;
-  document.getElementById('progressPct').textContent = Math.round(pct*100) + '% gastado';
-
-  // Días restantes = desde mañana hasta fin del período (hoy no cuenta, está en curso)
-  const todayStr = today();
-  const tomorrow = new Date(parseDate(todayStr).getTime() + 86400000).toISOString().slice(0,10);
-  const daysLeft = Math.max(1, daysBetween(tomorrow, p.endDate));
-  // Por día = (presupuesto total - total gastado) / días restantes
-  const totalSpent = expenses.filter(e => e.date >= p.startDate && e.date <= p.endDate).reduce((s,e)=>s+e.amount,0);
-  const dailyRemaining = Math.max(0, p.libre - totalSpent) / (daysLeft + 1); // +1 por hoy que está en curso
-  document.getElementById('statDaily').textContent = fmt(dailyRemaining);
-  const todaySpent = expenses.filter(e=>e.date===todayStr).reduce((s,e)=>s+e.amount,0);
-  document.getElementById('statSpentToday').textContent = fmt(todaySpent);
-  document.getElementById('statDaysLeft').textContent = daysLeft;
-
-  // --- Fila bloque actual ---
-  const blockLastDayOffset = Math.min((currentBlock+1)*blockSize, totalDays) - 1;
-  const blockLastDay = new Date(parseDate(p.startDate).getTime() + blockLastDayOffset*86400000).toISOString().slice(0,10);
-  const blockDaysLeft = Math.max(0, daysBetween(tomorrow, blockLastDay));
-  const blockAvailable = getBlockSaldo(p, currentBlock);
-  const blockSpentAmt = getBlockExpenses(p, currentBlock).reduce((s,e)=>s+e.amount,0);
-  const blockDailyRemaining = blockDaysLeft + 1 > 0 ? Math.max(0, blockAvailable) / (blockDaysLeft + 1) : 0;
-  document.getElementById('statBlockDaily').textContent = fmt(blockDailyRemaining);
-  document.getElementById('statBlockSpent').textContent = fmt(blockSpentAmt);
-  document.getElementById('statBlockDaysLeft').textContent = blockDaysLeft;
-
-  // --- Período actual ---
-  const periodSpent = expenses.filter(e=>e.date>=p.startDate&&e.date<=p.endDate).reduce((s,e)=>s+e.amount,0);
-  const periodAvail = p.libre - periodSpent;
-  document.getElementById('periodTotalBudget').textContent = fmt(p.libre);
-  document.getElementById('periodTotalSpent').textContent = fmt(periodSpent);
-  document.getElementById('periodTotalAvailable').textContent = fmt(periodAvail);
-  document.getElementById('periodTotalAvailable').style.color = periodAvail >= 0 ? 'var(--green)' : 'var(--red)';
-
-  const opts = {day:'numeric',month:'short'};
-  document.getElementById('periodLabel').textContent =
-    p.label + ' · ' + parseDate(p.startDate).toLocaleDateString('es-AR',opts) + ' → ' + parseDate(p.endDate).toLocaleDateString('es-AR',opts);
-
-  // Bloque seleccionado (o actual por defecto)
-  if (selectedBlock === null) selectedBlock = currentBlock;
-  const viewBlock = selectedBlock;
-
-  const chips = document.getElementById('blockChips');
-  chips.innerHTML = '';
-  for (let i=0; i<4; i++) {
-    const c = document.createElement('div');
-    const classes = ['block-chip'];
-    if (i === currentBlock) classes.push('current');
-    if (i === viewBlock) classes.push('selected');
-    c.className = classes.join(' ');
-    const bs = i*blockSize;
-    const d1 = new Date(parseDate(p.startDate).getTime()+bs*86400000);
-    const d2 = new Date(parseDate(p.startDate).getTime()+(Math.min(bs+blockSize,totalDays)-1)*86400000);
-    c.textContent = `${i+1}° (${d1.getDate()}/${d1.getMonth()+1}–${d2.getDate()}/${d2.getMonth()+1})`;
-    c.onclick = () => { selectedBlock = i; renderHome(); };
-    chips.appendChild(c);
-  }
-
-  const blockSaldo = getBlockSaldo(p, viewBlock);
-  const blockExps = getBlockExpenses(p, viewBlock);
-  document.getElementById('blockBudget').textContent = fmt(blockSaldo);
-  document.getElementById('blockSpent').textContent = fmt(blockExps.reduce((s,e)=>s+e.amount,0));
-
-  const todayExps = expenses.filter(e=>e.date===todayStr).sort((a,b)=>b.ts-a.ts);
-  document.getElementById('todayList').innerHTML = todayExps.length === 0
-    ? '<div class="empty-state"><div class="empty-icon">🧾</div>Sin gastos hoy</div>'
-    : todayExps.map(expenseHTML).join('');
+// ── HELPERS ────────────────────────────────────────────
+function getStatus(i) {
+  if (i.current <= 0) return 'out';
+  if (i.current < i.target) return 'low';
+  return 'ok';
+}
+function statusDot(s) { return s==='ok'?'dot-ok':s==='low'?'dot-low':'dot-out'; }
+function fmt(n) { return '$'+Math.round(n).toLocaleString('es-AR'); }
+function fmtDate(ts) {
+  const d = new Date(ts);
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 }
 
-function expenseHTML(e) {
-  return `<div class="expense-item">
-    <div class="exp-icon" style="background:${CAT_COLORS[e.cat]}22">${CAT_ICONS[e.cat]}</div>
-    <div class="exp-info">
-      <div class="exp-concept">${e.concept||e.cat}</div>
-      <div class="exp-meta">${e.cat} · ${formatDate(e.date)}</div>
-    </div>
-    <div class="exp-amount">${fmt(e.amount)}</div>
-    <button class="exp-delete" onclick="deleteExpense('${e.id}')">✕</button>
-  </div>`;
+// ── FILTROS ────────────────────────────────────────────
+function filterItems(list, tabKey) {
+  const f = activeFilter[tabKey];
+  if (f === 'Todos') return list;
+  return list.filter(i => resolveGroup(i.cat) === f);
 }
-function formatDate(d) { return parseDate(d).toLocaleDateString('es-AR',{day:'numeric',month:'short'}); }
 
-function renderHistory() {
-  const sorted = [...expenses].sort((a,b)=>b.ts-a.ts);
-  const hist = document.getElementById('historyList');
-  if (!sorted.length) { hist.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div>Sin gastos registrados</div>'; return; }
-  const groups = {};
-  sorted.forEach(e=>{ if(!groups[e.date]) groups[e.date]=[]; groups[e.date].push(e); });
-  hist.innerHTML = Object.entries(groups).map(([date,exps])=>{
-    const total = exps.reduce((s,e)=>s+e.amount,0);
-    return `<div class="date-group-label">${formatDate(date)} — ${fmt(total)}</div><div class="card" style="padding:8px 16px">${exps.map(expenseHTML).join('')}</div>`;
+function filterMovements(list, tabKey) {
+  const f = activeFilter[tabKey];
+  if (f === 'Todos') return list;
+  return list.filter(m => {
+    const item = items.find(i => i.id === m.itemId);
+    return item ? resolveGroup(item.cat) === f : false;
+  });
+}
+
+function buildFilterBar(containerId, tabKey, includeAll=true) {
+  const el = document.getElementById(containerId);
+  const cats = getAllCats();
+  const chips = includeAll ? ['Todos', ...cats] : cats;
+  el.innerHTML = chips.map(c => {
+    const icon = c === 'Todos' ? '🔍' : (CAT_ICONS[c] || '📦');
+    return `<div class="filter-chip${activeFilter[tabKey]===c?' active':''}"
+      onclick="setFilter('${tabKey}','${c}')">${icon} ${c}</div>`;
   }).join('');
 }
 
-function renderAnalysis() {
-  const p = getActivePeriod();
-  if (!p) return;
-  const periodExps = expenses.filter(e=>e.date>=p.startDate&&e.date<=p.endDate);
-  const total = periodExps.reduce((s,e)=>s+e.amount,0);
-  const bycat = {};
-  ['comida','gusto','limpieza','casa','perro'].forEach(c=>bycat[c]=0);
-  periodExps.forEach(e=>{ bycat[e.cat]=(bycat[e.cat]||0)+e.amount; });
-  const catEl = document.getElementById('catAnalysis');
-  catEl.innerHTML = total === 0
-    ? '<div class="empty-state" style="padding:20px 0"><div class="empty-icon">📊</div>Sin datos aún</div>'
-    : Object.entries(bycat).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>{
-        const pct = total > 0 ? (amt/total)*100 : 0;
-        return `<div class="cat-bar-row"><div class="cat-bar-header"><span>${CAT_ICONS[cat]} ${cat}</span><span>${fmt(amt)} <span style="color:var(--muted);font-size:11px">${Math.round(pct)}%</span></span></div><div class="cat-bar-track"><div class="cat-bar-fill" style="width:${pct}%;background:${CAT_COLORS[cat]}"></div></div></div>`;
-      }).join('');
-  const { budget, spent, available } = getAccumulated(p);
-  document.getElementById('analysisTotals').innerHTML = `
-    <div class="settings-row"><span>Presupuesto acumulado</span><strong>${fmt(budget)}</strong></div>
-    <div class="settings-row"><span>Total gastado</span><strong>${fmt(spent)}</strong></div>
-    <div class="settings-row"><span>Disponible</span><strong style="color:${available>=0?'var(--green)':'var(--red)'}">${fmt(available)}</strong></div>
-    <div class="settings-row"><span>Gastos registrados</span><strong>${periodExps.length}</strong></div>`;
+function setFilter(tabKey, cat) {
+  activeFilter[tabKey] = cat;
+  render();
 }
 
-function renderPeriods() {
-  const list = document.getElementById('periodList');
-  if (!periods.length) {
-    list.innerHTML = '<div class="empty-state" style="padding:20px 0"><div class="empty-icon">📅</div>Sin períodos cargados</div>';
+// ── RENDER ─────────────────────────────────────────────
+function render() {
+  renderComprar(); renderStock(); renderHistorial(); renderItemsPage(); renderHeader();
+}
+
+function renderHeader() {
+  const out = items.filter(i=>getStatus(i)==='out').length;
+  const low = items.filter(i=>getStatus(i)==='low').length;
+  document.getElementById('headerSub').textContent =
+    `${out} sin stock · ${low} a reponer · ${items.length} items`;
+}
+
+function renderComprar() {
+  buildFilterBar('filterComprar','comprar');
+  const filtered = filterItems(items, 'comprar');
+  const out = filtered.filter(i=>getStatus(i)==='out').length;
+  const low = filtered.filter(i=>getStatus(i)==='low').length;
+  const ok  = filtered.filter(i=>getStatus(i)==='ok').length;
+  document.getElementById('statOut').textContent = items.filter(i=>getStatus(i)==='out').length;
+  document.getElementById('statLow').textContent = items.filter(i=>getStatus(i)==='low').length;
+  document.getElementById('statOk').textContent  = items.filter(i=>getStatus(i)==='ok').length;
+
+  const toReponer = filtered.filter(i=>getStatus(i)==='out'||getStatus(i)==='low');
+  const el = document.getElementById('buyList');
+  if (!toReponer.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div>Todo el stock está completo</div>';
     return;
   }
-  list.innerHTML = [...periods].reverse().map(p => {
-    const isActive = p.id === activePeriodId;
-    const opts = {day:'numeric',month:'short'};
-    return `<div class="period-item" onclick="selectPeriod('${p.id}')">
-      <div class="period-dot ${isActive?'active':''}"></div>
-      <div class="period-info">
-        <div class="period-name">${p.label}</div>
-        <div class="period-dates">${parseDate(p.startDate).toLocaleDateString('es-AR',opts)} → ${parseDate(p.endDate).toLocaleDateString('es-AR',opts)} · ${fmt(p.libre)} libre</div>
-      </div>
-      ${isActive ? '<span class="period-badge">activo</span>' : ''}
-      <button class="period-delete-btn" onclick="deletePeriod(event,'${p.id}')">✕</button>
-    </div>`;
-  }).join('');
+  const byCat = {};
+  toReponer.forEach(i => { const g=resolveGroup(i.cat); if(!byCat[g]) byCat[g]=[]; byCat[g].push(i); });
+  el.innerHTML = Object.entries(byCat).map(([cat,citems]) =>
+    `<div class="cat-header">${CAT_ICONS[cat]||'📦'} ${cat}</div>` +
+    citems.map(i => {
+      const s = getStatus(i);
+      const badge = s==='out'?'<span class="badge badge-red">SIN STOCK</span>':'<span class="badge badge-yellow">REPONER</span>';
+      return `<div class="stock-item" onclick="quickMov('${i.id}')">
+        <div class="stock-dot ${statusDot(s)}"></div>
+        <div class="stock-info">
+          <div class="stock-name">${i.name}</div>
+          <div class="stock-meta">${badge} · necesitás ${i.target} ${i.unit}</div>
+        </div>
+        <div class="stock-qty">
+          <div class="qty-main" style="color:${s==='out'?'var(--red)':'var(--yellow)'}">${i.current}</div>
+          <div class="qty-unit">${i.unit}</div>
+        </div>
+      </div>`;
+    }).join('')
+  ).join('');
 }
 
-function selectPeriod(id) { activePeriodId = id; selectedBlock = null; saveAll(); render(); }
-function deletePeriod(ev, id) {
-  ev.stopPropagation();
-  if (!confirm('¿Eliminar este período?')) return;
-  periods = periods.filter(p=>p.id!==id);
-  if (activePeriodId === id) activePeriodId = periods.length ? periods[periods.length-1].id : null;
+function renderStock() {
+  buildFilterBar('filterStock','stock');
+  const filtered = filterItems(items, 'stock');
+  const el = document.getElementById('stockList');
+  if (!filtered.length) { el.innerHTML='<div class="empty-state"><div class="empty-icon">📦</div>Sin items en esta categoría</div>'; return; }
+  const byCat = {};
+  filtered.forEach(i => { const g=resolveGroup(i.cat); if(!byCat[g]) byCat[g]=[]; byCat[g].push(i); });
+  el.innerHTML = Object.entries(byCat).map(([cat,citems]) =>
+    `<div class="cat-header" style="padding:8px 0 4px">${CAT_ICONS[cat]||'📦'} ${cat}</div>
+    <div class="card" style="padding:8px 16px">` +
+    citems.map(i => {
+      const s = getStatus(i);
+      return `<div class="stock-item" onclick="quickMov('${i.id}')">
+        <div class="stock-dot ${statusDot(s)}"></div>
+        <div class="stock-info">
+          <div class="stock-name">${i.name}</div>
+          <div class="stock-meta">Obj: ${i.target} ${i.unit}${i.lastPrice?` · ${fmt(i.lastPrice)}`:''}${i.lastPurchase?` · ${fmtDate(i.lastPurchase)}`:''}</div>
+        </div>
+        <div class="stock-qty">
+          <div class="qty-main" style="color:${s==='ok'?'var(--green)':s==='low'?'var(--yellow)':'var(--red)'}">${i.current}</div>
+          <div class="qty-unit">${i.unit}</div>
+        </div>
+      </div>`;
+    }).join('') + '</div>'
+  ).join('');
+}
+
+function renderHistorial() {
+  buildFilterBar('filterHistorial','historial');
+  const filtered = filterMovements(movements, 'historial');
+  const el = document.getElementById('histList');
+  if (!filtered.length) { el.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div>Sin movimientos</div>'; return; }
+  const sorted = [...filtered].sort((a,b)=>b.ts-a.ts);
+  const groups = {};
+  sorted.forEach(m => { const d=fmtDate(m.ts); if(!groups[d]) groups[d]=[]; groups[d].push(m); });
+  el.innerHTML = Object.entries(groups).map(([date,movs]) =>
+    `<div class="cat-header">${date}</div>
+    <div class="card" style="padding:8px 16px">` +
+    movs.map(m =>
+      `<div class="mov-item">
+        <span class="mov-badge ${m.type==='compra'?'mov-compra':'mov-uso'}">${m.type==='compra'?'COMPRA':'USO'}</span>
+        <div class="mov-info">
+          <div class="mov-name">${m.itemName}</div>
+          <div class="mov-meta">${m.notes||m.cat}</div>
+        </div>
+        <div class="mov-right">
+          <div class="mov-qty">${m.type==='compra'?'+':'−'}${m.qty} ${m.unit}</div>
+          ${m.price?`<div class="mov-price">${fmt(m.price)}/u</div>`:''}
+        </div>
+        <button class="mov-delete" onclick="deleteMov('${m.id}')">✕</button>
+      </div>`
+    ).join('') + '</div>'
+  ).join('');
+}
+
+function renderItemsPage() {
+  buildFilterBar('filterItems','items');
+  const filtered = filterItems(items, 'items');
+  const el = document.getElementById('itemList');
+  if (!filtered.length) { el.innerHTML='<div class="empty-state"><div class="empty-icon">📦</div>Sin items</div>'; return; }
+  const byCat = {};
+  filtered.forEach(i => { const g=resolveGroup(i.cat); if(!byCat[g]) byCat[g]=[]; byCat[g].push(i); });
+  el.innerHTML = Object.entries(byCat).map(([cat,citems]) =>
+    `<div class="cat-header">${CAT_ICONS[cat]||'📦'} ${cat}</div>` +
+    citems.map(i =>
+      `<div class="item-manage">
+        <div class="item-manage-info">
+          <div class="item-manage-name">${i.name}</div>
+          <div class="item-manage-meta">Obj: ${i.target} ${i.unit} · Stock: ${i.current} ${i.unit}</div>
+        </div>
+        <button class="item-edit-btn" onclick="openItemModal('${i.id}')">Editar</button>
+        <button class="item-del-btn"  onclick="deleteItem('${i.id}')">✕</button>
+      </div>`
+    ).join('')
+  ).join('');
+}
+
+// ── MOVIMIENTO ─────────────────────────────────────────
+function openMovModal(preItemId) {
+  movType = null;
+  document.getElementById('movOverlay').classList.add('open');
+  document.getElementById('btnCompra').className = 'type-btn';
+  document.getElementById('btnUso').className    = 'type-btn';
+  document.getElementById('movQty').value   = '';
+  document.getElementById('movPrice').value = '';
+  document.getElementById('movNotes').value = '';
+  document.getElementById('priceGroup').style.display = 'none';
+  document.getElementById('movSaveBtn').disabled = true;
+  const sel = document.getElementById('movItem');
+  sel.innerHTML = '<option value="">Seleccioná...</option>' +
+    [...items].sort((a,b)=>a.name.localeCompare(b.name))
+      .map(i=>`<option value="${i.id}">${i.name} (${i.current} ${i.unit})</option>`).join('');
+  if (preItemId) sel.value = preItemId;
+}
+
+function quickMov(id) { openMovModal(id); }
+
+function selType(t) {
+  movType = t;
+  document.getElementById('btnCompra').className = t==='compra'?'type-btn selected-compra':'type-btn';
+  document.getElementById('btnUso').className    = t==='uso'   ?'type-btn selected-uso'   :'type-btn';
+  document.getElementById('priceGroup').style.display = t==='compra'?'block':'none';
+  movCheck();
+}
+
+function movCheck() {
+  const qty  = parseFloat(document.getElementById('movQty').value);
+  const item = document.getElementById('movItem').value;
+  document.getElementById('movSaveBtn').disabled = !(movType && qty>0 && item);
+}
+
+function saveMov() {
+  const itemId = document.getElementById('movItem').value;
+  const qty    = parseFloat(document.getElementById('movQty').value);
+  const price  = parseFloat(document.getElementById('movPrice').value)||0;
+  const notes  = document.getElementById('movNotes').value.trim();
+  const item   = items.find(i=>i.id===itemId);
+  if (!item||!qty||!movType) return;
+  movements.push({ id:'m_'+Date.now(), ts:Date.now(), type:movType, itemId, itemName:item.name, cat:item.cat, unit:item.unit, qty, price, notes });
+  if (movType==='compra') {
+    item.current = +(item.current+qty).toFixed(3);
+    if (price) { item.lastPrice=price; item.lastPurchase=Date.now(); }
+  } else {
+    item.current = Math.max(0, +(item.current-qty).toFixed(3));
+  }
+  saveAll(); closeModal('movOverlay'); render();
+}
+
+function deleteMov(id) {
+  if (!confirm('¿Eliminar? No revierte el stock.')) return;
+  movements = movements.filter(m=>m.id!==id);
   saveAll(); render();
 }
 
-function startForm() {
-  document.getElementById('periodListView').style.display = 'none';
-  document.getElementById('periodForm').style.display = 'block';
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-
-  const mesEl = document.getElementById('pfMes');
-  mesEl.innerHTML = '<option value="">Seleccioná...</option>' +
-    MONTHS.map((m,i) => `<option value="${i+1}">${m}</option>`).join('');
-  mesEl.value = month + 1;
-
-  const anioEl = document.getElementById('pfAnio');
-  anioEl.innerHTML = '<option value="">Seleccioná...</option>' +
-    [year, year+1].map(y => `<option value="${y}">${y}</option>`).join('');
-  anioEl.value = year;
-
-  const startDefault = `${year}-${String(month+1).padStart(2,'0')}-01`;
-  const nextMonth = month === 11 ? 0 : month + 1;
-  const nextYear = month === 11 ? year + 1 : year;
-  const nextPaydayDefault = `${nextYear}-${String(nextMonth+1).padStart(2,'0')}-05`;
-
-  document.getElementById('pfStart').value = startDefault;
-  document.getElementById('pfNextPayday').value = nextPaydayDefault;
-  document.getElementById('pfLibre').value = '';
-  pfCheck();
+// ── ITEM ABM ───────────────────────────────────────────
+function openItemModal(editId) {
+  document.getElementById('itemOverlay').classList.add('open');
+  document.getElementById('iEditId').value = editId||'';
+  document.getElementById('newCatRow').style.display = 'none';
+  document.getElementById('newCatInput').value = '';
+  buildCatSelect();
+  if (editId) {
+    const i = items.find(x=>x.id===editId);
+    document.getElementById('itemModalTitle').textContent = 'Editar item';
+    document.getElementById('iName').value   = i.name;
+    document.getElementById('iCat').value    = i.cat;
+    document.getElementById('iUnit').value   = i.unit;
+    document.getElementById('iTarget').value = i.target;
+  } else {
+    document.getElementById('itemModalTitle').textContent = 'Nuevo item';
+    document.getElementById('iName').value   = '';
+    document.getElementById('iCat').value    = '';
+    document.getElementById('iUnit').value   = 'unid';
+    document.getElementById('iTarget').value = '1';
+  }
+  itemCheck();
 }
 
-function cancelForm() {
-  document.getElementById('periodForm').style.display = 'none';
-  document.getElementById('periodListView').style.display = 'block';
+function buildCatSelect(selectedVal) {
+  const sel = document.getElementById('iCat');
+  const prev = selectedVal || sel.value;
+  sel.innerHTML = '<option value="">Seleccioná...</option>' +
+    getAllCats().map(c=>`<option value="${c}"${c===prev?' selected':''}>${CAT_ICONS[c]||'📦'} ${c}</option>`).join('') +
+    '<option value="__nueva__">➕ Nueva categoría...</option>';
+  sel.value = prev || '';
 }
 
-function pfCheck() {
-  const mes = document.getElementById('pfMes').value;
-  const anio = document.getElementById('pfAnio').value;
-  const libre = parseFloat(document.getElementById('pfLibre').value);
-  const start = document.getElementById('pfStart').value;
-  const nextPayday = document.getElementById('pfNextPayday').value;
-  document.getElementById('pfSaveBtn').disabled = !(mes && anio && libre > 0 && start && nextPayday && nextPayday > start);
+function onCatChange() {
+  const val = document.getElementById('iCat').value;
+  document.getElementById('newCatRow').style.display = val==='__nueva__' ? 'flex' : 'none';
+  if (val==='__nueva__') document.getElementById('newCatInput').focus();
+  itemCheck();
 }
 
-function savePeriod() {
-  const mesNum = parseInt(document.getElementById('pfMes').value);
-  const anio = parseInt(document.getElementById('pfAnio').value);
-  const libre = parseFloat(document.getElementById('pfLibre').value);
-  const startDate = document.getElementById('pfStart').value;
-  const nextPayday = document.getElementById('pfNextPayday').value;
-  // endDate = día anterior al próximo sueldo
-  const endDateObj = new Date(parseDate(nextPayday).getTime() - 86400000);
-  const endDate = endDateObj.toISOString().slice(0,10);
-  periods.push({ id: 'p_' + Date.now(), label: MONTHS[mesNum-1] + ' ' + anio, startDate, endDate, nextPayday, libre });
-  activePeriodId = periods[periods.length-1].id;
-  saveAll(); cancelForm(); render();
+function confirmNewCat() {
+  const name = document.getElementById('newCatInput').value.trim();
+  if (!name) return;
+  const customs = getCustomCats();
+  if (!getAllCats().includes(name)) {
+    customs.push(name);
+    saveCustomCats(customs);
+    if (!CAT_ICONS[name]) CAT_ICONS[name] = '📦';
+  }
+  buildCatSelect(name);
+  document.getElementById('newCatRow').style.display = 'none';
+  document.getElementById('newCatInput').value = '';
+  itemCheck();
 }
 
+function itemCheck() {
+  const n = document.getElementById('iName').value.trim();
+  const c = document.getElementById('iCat').value;
+  document.getElementById('itemSaveBtn').disabled = !(n && c && c !== '__nueva__');
+}
+
+function saveItem() {
+  const editId = document.getElementById('iEditId').value;
+  const name   = document.getElementById('iName').value.trim();
+  const cat    = document.getElementById('iCat').value;
+  const unit   = document.getElementById('iUnit').value;
+  const target = parseFloat(document.getElementById('iTarget').value)||1;
+  if (!name||!cat||cat==='__nueva__') return;
+  if (editId) {
+    Object.assign(items.find(x=>x.id===editId), {name,cat,unit,target});
+  } else {
+    items.push({id:'i_'+Date.now(),name,cat,unit,target,current:0,lastPrice:0,lastPurchase:null});
+  }
+  saveAll(); closeModal('itemOverlay'); render();
+}
+
+function deleteItem(id) {
+  if (!confirm('¿Eliminar este item?')) return;
+  items = items.filter(i=>i.id!==id);
+  saveAll(); render();
+}
+
+// ── UTILS ──────────────────────────────────────────────
 function showTab(tab) {
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -600,52 +622,8 @@ function showTab(tab) {
   document.getElementById('page-'+tab).classList.add('active');
   render();
 }
-
-function openModal() {
-  if (!getActivePeriod()) { alert('Primero creá un período en la pestaña Períodos'); return; }
-  document.getElementById('modalOverlay').classList.add('open');
-  document.getElementById('inputAmount').focus();
-  selectedCat = null;
-  document.querySelectorAll('.cat-pill').forEach(p=>p.classList.remove('selected'));
-  document.getElementById('inputAmount').value = '';
-  document.getElementById('inputConcept').value = '';
-  document.getElementById('submitBtn').disabled = true;
-}
-function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
-function handleOverlayClick(e) { if (e.target===document.getElementById('modalOverlay')) closeModal(); }
-
-function selectCat(cat) {
-  selectedCat = cat;
-  document.querySelectorAll('.cat-pill').forEach(p=>p.classList.remove('selected'));
-  document.getElementById('cat-'+cat).classList.add('selected');
-  checkSubmit();
-}
-function checkSubmit() {
-  const amt = parseFloat(document.getElementById('inputAmount').value);
-  document.getElementById('submitBtn').disabled = !(amt>0 && selectedCat);
-}
-document.getElementById('inputAmount').addEventListener('input', checkSubmit);
-
-function addExpense() {
-  const amt = parseFloat(document.getElementById('inputAmount').value);
-  const concept = document.getElementById('inputConcept').value.trim();
-  if (!amt || !selectedCat) return;
-  expenses.push({ id: Date.now().toString(), ts: Date.now(), date: today(), amount: amt, concept, cat: selectedCat });
-  saveAll(); closeModal(); render();
-}
-function deleteExpense(id) {
-  if (!confirm('¿Eliminar este gasto?')) return;
-  expenses = expenses.filter(e=>e.id!==id);
-  saveAll(); render();
-}
-function clearExpenses() {
-  if (!confirm('¿Borrar TODOS los gastos?')) return;
-  expenses = []; saveAll(); render();
-}
-function clearPeriods() {
-  if (!confirm('¿Borrar TODOS los períodos?')) return;
-  periods = []; activePeriodId = null; saveAll(); render();
-}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function handleOverlay(e,id) { if(e.target===document.getElementById(id)) closeModal(id); }
 
 render();
 </script>
