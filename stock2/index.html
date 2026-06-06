@@ -215,6 +215,19 @@ const SEED=[
 ];
 const LI={"Supermercado":"🛒","Verdulería":"🥬","Carnicería":"🥩","Pescadería":"🐟","Dietética":"🌾"};
 const STEP={kg:0.1,litro:0.25,gramos:25,unid:1,paquete:1,frasco:1,lata:1,pote:1,atado:1,bolsa:1,rodajas:1};
+const PRICES={
+  'Huevos':230,'Pan lactal':383,'Yogurt griego':1300,'Yogurt natural':2500,
+  'Manteca de maní':5000,'Arroz integral':2500,'Fideos':1600,'Leche':1800,
+  'Jamón':14.67,'Queso en feta':20,'Queso crema':3800,'Queso cremoso':11,
+  'Crema de leche':2800,'Atún en lata':2800,'Galletas de arroz':2000,
+  'Pan rallado':3500,'Pascualina':2500,'Salsa de tomate':1000,'Manteca':2600,
+  'Banana':333,'Manzana':800,'Papa':1200,'Batata':2000,'Calabaza':3000,
+  'Tomate':1000,'Zanahoria':150,'Cebolla':150,'Morrón':1000,'Zucchini':800,
+  'Lechuga':2000,'Palta':1500,'Espinaca':3800,
+  'Pechuga de pollo':18000,'Churrasco':18000,'Carne picada':18000,
+  'Filet de merluza':10000,
+  'Avena':7.5,'Frutos secos':25,'Miel':10,'Granola':12.5
+};
 // Migrar datos del formato anterior si existen
 (function(){
   if(!localStorage.getItem('stock_v2') && localStorage.getItem('stock_items')){
@@ -244,7 +257,7 @@ function fq(n,u){if(u==='kg'||u==='litro')return parseFloat(n.toFixed(1));if(u==
 function fp(n){if(!n||n===0)return null;return '$'+Math.round(n).toLocaleString('es-AR');}
 function fd(ts){const d=new Date(ts);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();}
 function gs(i){if(i.current<=0)return'out';if(i.current<i.target)return'low';return'ok';}
-function glp(id){const ps=purchases.filter(p=>p.itemId===id&&p.price>0);if(!ps.length)return 0;return ps.sort((a,b)=>b.ts-a.ts)[0].price;}
+function glp(id){const ps=purchases.filter(p=>p.itemId===id&&p.price>0);if(ps.length)return ps.sort((a,b)=>b.ts-a.ts)[0].price;const item=items.find(i=>i.id===id);return(item&&PRICES[item.name])||0;}
 function gap(id){const ps=purchases.filter(p=>p.itemId===id&&p.price>0);if(!ps.length)return 0;return ps.reduce((s,p)=>s+p.price,0)/ps.length;}
 function getLugares(){return['Todos',...new Set(items.map(i=>i.lugar))];}
 function adjust(id,dir){const item=items.find(i=>i.id===id);if(!item)return;item.current=Math.max(0,parseFloat((item.current+dir*stp(item.unit)).toFixed(3)));save();renderAll();}
