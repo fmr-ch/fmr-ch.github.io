@@ -78,6 +78,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .bsave:disabled{opacity:.4;cursor:not-allowed}
 .empty{text-align:center;color:var(--muted);padding:50px 0}
 .empty-icon{font-size:42px;margin-bottom:10px}
+.kpi-card{background:var(--card);border-radius:14px;padding:14px 18px;margin-bottom:14px;border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.kpi-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.kpi-value{font-size:22px;font-weight:800;color:var(--accent)}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.item-last-price{font-size:11px;color:var(--yellow);font-weight:600}
 </style>
 </head>
 <body>
@@ -100,6 +105,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div id="list-stock"></div>
 </div>
 <div class="page" id="page-compras">
+  <div id="kpi-compras"></div>
   <div class="filter-bar" id="filter-compras"></div>
   <div id="list-compras"></div>
 </div>
@@ -252,12 +258,26 @@ function renderStock(){
 }
 function renderCompras(){
   chips('filter-compras',fC,'setFC',getLugares);
-  const fl=(fC==='Todos'?items:items.filter(i=>i.lugar===fC)).filter(i=>i.current<i.target);
+  const allFaltantes=(fC==='Todos'?items:items.filter(i=>i.lugar===fC)).filter(i=>i.current<i.target);
   const el=document.getElementById('list-compras');
-  if(!fl.length){el.innerHTML=empty('✅','Todo el stock completo');return;}
-  const g={};fl.forEach(i=>{if(!g[i.lugar])g[i.lugar]=[];g[i.lugar].push(i);});
+  const kpiEl=document.getElementById('kpi-compras');
+  if(!allFaltantes.length){el.innerHTML=empty('✅','Todo el stock completo');kpiEl.innerHTML='';return;}
+  // KPI total estimado
+  let total=0,sinPrecio=0;
+  allFaltantes.forEach(item=>{
+    const falta=Math.max(0,item.target-item.current);
+    const lp=glp(item.id);
+    if(lp>0)total+=falta*lp;else sinPrecio++;
+  });
+  kpiEl.innerHTML='<div class="kpi-card"><div><div class="kpi-label">Total estimado de compra</div><div class="kpi-sub">'+(sinPrecio>0?sinPrecio+' ítem'+(sinPrecio>1?'s':'')+' sin precio histórico':'Basado en último precio registrado')+'</div></div><div class="kpi-value">'+fp(total)+'</div></div>';
+  const g={};allFaltantes.forEach(i=>{if(!g[i.lugar])g[i.lugar]=[];g[i.lugar].push(i);});
   Object.values(g).forEach(a=>a.sort((a,b)=>{const sa=gs(a),sb=gs(b);if(sa==='out'&&sb!=='out')return -1;if(sb==='out'&&sa!=='out')return 1;return a.name.localeCompare(b.name);}));
-  el.innerHTML=Object.entries(g).map(([lugar,gi])=>'<div class="lugar-header">'+(LI[lugar]||'🏪')+' '+lugar+'</div>'+gi.map(item=>{const falta=fq(item.target-item.current,item.unit),curr=fq(item.current,item.unit),tgt=fq(item.target,item.unit);const lp=fp(glp(item.id)),ap=fp(gap(item.id));return'<div class="compra-item"><div class="compra-row1"><div class="dot '+(gs(item)==='out'?'dot-out':'dot-low')+'"></div><div class="compra-name">'+item.name+'</div><div class="falta-badge">+'+falta+' '+item.unit+'</div></div><div class="compra-row2"><div class="compra-detail">Tenés '+curr+' · Obj '+tgt+(lp?'<br>Último: <span class="price-val">'+lp+'</span>'+(ap?' · Hab: <span class="price-val">'+ap+'</span>':''):'')+'</div><button class="btn-comprar" onclick="openBuy(\''+item.id+'\')">+ Compra</button></div></div>';}).join('')).join('');
+  el.innerHTML=Object.entries(g).map(([lugar,gi])=>'<div class="lugar-header">'+(LI[lugar]||'🏪')+' '+lugar+'</div>'+gi.map(item=>{
+    const falta=fq(item.target-item.current,item.unit),curr=fq(item.current,item.unit),tgt=fq(item.target,item.unit);
+    const lp=glp(item.id),lpFmt=fp(lp);
+    const estimado=lp>0?fp(Math.max(0,item.target-item.current)*lp):null;
+    return'<div class="compra-item"><div class="compra-row1"><div class="dot '+(gs(item)==='out'?'dot-out':'dot-low')+'"></div><div class="compra-name">'+item.name+'</div><div class="falta-badge">+'+falta+' '+item.unit+'</div></div><div class="compra-row2"><div class="compra-detail">Tenés '+curr+' · Obj '+tgt+(lpFmt?'<br><span class="item-last-price">Último: '+lpFmt+'/u'+(estimado?' · Est: '+estimado:'')+'</span>':'<br><span style="font-size:10px;color:var(--muted)">Sin precio histórico</span>')+'</div><button class="btn-comprar" onclick="openBuy(''+item.id+'')">+ Compra</button></div></div>';
+  }).join('')).join('');
 }
 function renderHistorial(){
   const el=document.getElementById('list-historial');
