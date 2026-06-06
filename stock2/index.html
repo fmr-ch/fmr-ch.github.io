@@ -163,7 +163,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <input type="number" class="fi" id="buy-qty" placeholder="0" inputmode="decimal" oninput="buyCheck()">
     </div>
     <div class="fg">
-      <label class="fl">Precio unitario ($)</label>
+      <label class="fl">Precio total pagado ($)</label>
       <input type="number" class="fi" id="buy-price" placeholder="0" inputmode="numeric">
     </div>
     <button class="bsave" id="buy-save" onclick="savePurchase()" disabled>Guardar</button>
@@ -268,7 +268,7 @@ function niCheck(){const n=document.getElementById('ni-name').value.trim(),t=par
 function saveNew(){const name=document.getElementById('ni-name').value.trim();const cat=document.getElementById('ni-cat').value;const lugar=document.getElementById('ni-lugar').value;const unit=document.getElementById('ni-unit').value;const target=parseFloat(document.getElementById('ni-target').value)||1;if(!name)return;items.push({id:'i'+Date.now(),cat,lugar,name,unit,target,current:0});save();document.getElementById('mbg-new').classList.remove('open');renderAll();}
 function openBuy(id){const item=items.find(i=>i.id===id);if(!item)return;buyItemId=id;document.getElementById('buy-title').textContent=item.name;document.getElementById('buy-sub').textContent='Faltan '+fq(Math.max(0,item.target-item.current),item.unit)+' '+item.unit+' para el objetivo';document.getElementById('buy-qty').value='';document.getElementById('buy-price').value='';document.getElementById('buy-save').disabled=true;document.getElementById('mbg-buy').classList.add('open');}
 function buyCheck(){document.getElementById('buy-save').disabled=!(parseFloat(document.getElementById('buy-qty').value)>0);}
-function savePurchase(){const item=items.find(i=>i.id===buyItemId);if(!item)return;const qty=parseFloat(document.getElementById('buy-qty').value)||0;const price=parseFloat(document.getElementById('buy-price').value)||0;if(qty<=0)return;purchases.push({id:'p'+Date.now(),ts:Date.now(),itemId:item.id,itemName:item.name,itemUnit:item.unit,qty,price});item.current=parseFloat((item.current+qty).toFixed(3));save();closeBuy();renderAll();}
+function savePurchase(){const item=items.find(i=>i.id===buyItemId);if(!item)return;const qty=parseFloat(document.getElementById('buy-qty').value)||0;const totalPrice=parseFloat(document.getElementById('buy-price').value)||0;if(qty<=0)return;const pricePerUnit=totalPrice>0?parseFloat((totalPrice/qty).toFixed(4)):0;purchases.push({id:'p'+Date.now(),ts:Date.now(),itemId:item.id,itemName:item.name,itemUnit:item.unit,qty,price:pricePerUnit,totalPrice});item.current=parseFloat((item.current+qty).toFixed(3));save();closeBuy();renderAll();}
 function closeBuy(){document.getElementById('mbg-buy').classList.remove('open');buyItemId=null;}
 function deletePurchase(id){purchases=purchases.filter(p=>p.id!==id);save();renderHistorial();}
 function deleteItem(id){
@@ -357,7 +357,7 @@ function renderCompras(){
 function renderHistorial(){
   const el=document.getElementById('list-historial');
   if(!purchases.length){el.innerHTML=empty('📋','Sin compras registradas');return;}
-  el.innerHTML=[...purchases].sort((a,b)=>b.ts-a.ts).map(p=>'<div class="hist-item"><div class="hist-info"><div class="hist-name">'+p.itemName+'</div><div class="hist-meta">'+p.qty+' '+p.itemUnit+'</div></div><div class="hist-right"><div class="hist-price">'+(p.price?fp(p.price)+'/u':'Sin precio')+'</div><div class="hist-date">'+fd(p.ts)+'</div></div><button class="btn-del" onclick="deletePurchase(\''+p.id+'\')">✕</button></div>').join('');
+  el.innerHTML=[...purchases].sort((a,b)=>b.ts-a.ts).map(p=>'<div class="hist-item"><div class="hist-info"><div class="hist-name">'+p.itemName+'</div><div class="hist-meta">'+p.qty+' '+p.itemUnit+(p.totalPrice?' · Total: '+fp(p.totalPrice):'')+'</div></div><div class="hist-right"><div class="hist-price">'+(p.price?fp(p.price)+'/'+p.itemUnit:'Sin precio')+'</div><div class="hist-date">'+fd(p.ts)+'</div></div><button class="btn-del" onclick="deletePurchase(\''+p.id+'\')">✕</button></div>').join('');
 }
 function empty(icon,text){return'<div class="empty"><div class="empty-icon">'+icon+'</div><div>'+text+'</div></div>';}
 function showTab(tab){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById('tab-'+tab).classList.add('active');document.getElementById('page-'+tab).classList.add('active');}
