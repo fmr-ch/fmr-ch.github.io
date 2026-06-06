@@ -173,7 +173,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <script>
 const SEED=[
   ["Comida","Supermercado","Huevos","unid",24],
-  ["Comida","Supermercado","Pan lactal","rodajas",44],
+  ["Comida","Supermercado","Pan lactal","paquete",3],
   ["Comida","Supermercado","Yogurt griego","pote",8],
   ["Comida","Supermercado","Yogurt natural","litro",4],
   ["Comida","Dietética","Avena","gramos",200],
@@ -216,7 +216,7 @@ const SEED=[
 const LI={"Supermercado":"🛒","Verdulería":"🥬","Carnicería":"🥩","Pescadería":"🐟","Dietética":"🌾"};
 const STEP={kg:0.1,litro:0.25,gramos:25,unid:1,paquete:1,frasco:1,lata:1,pote:1,atado:1,bolsa:1,rodajas:1};
 const PRICES={
-  'Huevos':230,'Pan lactal':383,'Yogurt griego':1300,'Yogurt natural':2500,
+  'Huevos':230,'Pan lactal':4000,'Yogurt griego':1300,'Yogurt natural':2500,
   'Manteca de maní':5000,'Arroz integral':2500,'Fideos':1600,'Leche':1800,
   'Jamón':14.67,'Queso en feta':20,'Queso crema':3800,'Queso cremoso':11,
   'Crema de leche':2800,'Atún en lata':2800,'Galletas de arroz':2000,
@@ -243,6 +243,8 @@ const PRICES={
     }catch(e){}
   }
 })();
+// Migrar Pan lactal de rodajas a paquete si viene de versión anterior
+(function(){var v=JSON.parse(localStorage.getItem('stock_v2')||'null');if(v&&v.length){var changed=false;v.forEach(function(i){if(i.name==='Pan lactal'&&i.unit==='rodajas'){i.unit='paquete';i.target=3;i.current=0;changed=true;}});if(changed)localStorage.setItem('stock_v2',JSON.stringify(v));}})();
 let items=JSON.parse(localStorage.getItem('stock_v2')||'null');
 let purchases=JSON.parse(localStorage.getItem('stock_purchases')||'[]');
 let buyItemId=null,fS='Todos',fC='Todos';
@@ -269,6 +271,13 @@ function buyCheck(){document.getElementById('buy-save').disabled=!(parseFloat(do
 function savePurchase(){const item=items.find(i=>i.id===buyItemId);if(!item)return;const qty=parseFloat(document.getElementById('buy-qty').value)||0;const price=parseFloat(document.getElementById('buy-price').value)||0;if(qty<=0)return;purchases.push({id:'p'+Date.now(),ts:Date.now(),itemId:item.id,itemName:item.name,itemUnit:item.unit,qty,price});item.current=parseFloat((item.current+qty).toFixed(3));save();closeBuy();renderAll();}
 function closeBuy(){document.getElementById('mbg-buy').classList.remove('open');buyItemId=null;}
 function deletePurchase(id){purchases=purchases.filter(p=>p.id!==id);save();renderHistorial();}
+function deleteItem(id){
+  var item=items.find(function(i){return i.id===id;});
+  if(!item)return;
+  if(!confirm('¿Eliminar "'+item.name+'"?'))return;
+  items=items.filter(function(i){return i.id!==id;});
+  save();renderAll();
+}
 function renderAll(){renderHeader();renderStock();renderCompras();renderHistorial();}
 function renderHeader(){document.getElementById('st-out').textContent=items.filter(i=>gs(i)==='out').length;document.getElementById('st-low').textContent=items.filter(i=>gs(i)==='low').length;document.getElementById('st-ok').textContent=items.filter(i=>gs(i)==='ok').length;document.getElementById('st-total').textContent=items.length;}
 function chips(cid,cur,fn,optFn){document.getElementById(cid).innerHTML=optFn().map(c=>'<div class="chip'+(cur===c?' active':'')+'" onclick="'+fn+'(\''+c+'\')">'+c+'</div>').join('');}
@@ -278,14 +287,28 @@ function renderStock(){
   chips('filter-stock',fS,'setFS',()=>['Todos',...new Set(items.map(i=>i.cat))]);
   const fl=fS==='Todos'?items:items.filter(i=>i.cat===fS);
   const el=document.getElementById('list-stock');
-  if(!fl.length){el.innerHTML=empty('📦','Sin ítems');return;}
-  el.innerHTML=fl.map(item=>{
+  if(!fl.length){el.innerHTML=empty('\u{1F4E6}','Sin ítems');return;}
+  el.innerHTML=fl.map(function(item){
     const s=gs(item),dc=s==='ok'?'dot-ok':s==='low'?'dot-low':'dot-out',bc=s==='ok'?'bar-ok':s==='low'?'bar-low':'bar-out';
     const pct=item.target>0?Math.min(100,(item.current/item.target)*100):0;
     const qty=fq(item.current,item.unit),tgt=fq(item.target,item.unit);
     const lp=fp(glp(item.id)),ap=fp(gap(item.id));
-    const ps=lp?'Último: <span class="price-val">'+lp+'</span>'+(ap?' · Hab: <span class="price-val">'+ap+'</span>':''):'';
-    return '<div class="item"><div class="item-top"><div class="dot '+dc+'"></div><div class="item-name">'+item.name+'</div></div><div class="item-meta"><span>Obj: '+tgt+' '+item.unit+'</span>'+(ps?'<span>'+ps+'</span>':'')+'</div><div class="item-ctrl"><button class="btn-adj" onclick="adjust(\''+item.id+'\',-1)">−</button><div class="qty-display">'+qty+'<span class="qty-unit">'+item.unit+'</span></div><button class="btn-adj" onclick="adjust(\''+item.id+'\',1)">+</button></div><div class="progress-wrap"><div class="progress-bar '+bc+'" style="width:'+pct+'%"></div></div></div>';
+    const ps=lp?'&Uacute;ltimo: <span class="price-val">'+lp+'</span>'+(ap?' &middot; Hab: <span class="price-val">'+ap+'</span>':''):'';
+    const id=item.id;
+    return '<div class="item">'
+      +'<div class="item-top">'
+        +'<div class="dot '+dc+'"></div>'
+        +'<div class="item-name">'+item.name+'</div>'
+        +'<button class="btn-del-item" onclick="deleteItem(\''+id+'\')" title="Eliminar">&#x1F5D1;</button>'
+      +'</div>'
+      +'<div class="item-meta"><span>Obj: '+tgt+' '+item.unit+'</span>'+(ps?'<span>'+ps+'</span>':'')+'</div>'
+      +'<div class="item-ctrl">'
+        +'<button class="btn-adj" onclick="adjust(\''+id+'\',-1)">−</button>'
+        +'<div class="qty-display">'+qty+'<span class="qty-unit">'+item.unit+'</span></div>'
+        +'<button class="btn-adj" onclick="adjust(\''+id+'\',1)">+</button>'
+      +'</div>'
+      +'<div class="progress-wrap"><div class="progress-bar '+bc+'" style="width:'+pct+'%"></div></div>'
+      +'</div>';
   }).join('');
 }
 function renderCompras(){
