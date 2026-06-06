@@ -233,7 +233,11 @@ const STEP={kg:0.1,litro:0.25,gramos:25,unid:1,paquete:1,frasco:1,lata:1,pote:1,
 let items=JSON.parse(localStorage.getItem('stock_v2')||'null');
 let purchases=JSON.parse(localStorage.getItem('stock_purchases')||'[]');
 let buyItemId=null,fS='Todos',fC='Todos';
-if(!items){items=SEED.map(([cat,lugar,name,unit,target],i)=>({id:'i'+i,cat,lugar,name,unit,target,current:0}));save();}
+if(!items||!items.length){
+  // Limpiar cualquier dato corrupto y arrancar con el seed completo
+  items=SEED.map(([cat,lugar,name,unit,target],i)=>({id:'i'+i,cat,lugar,name,unit,target,current:0}));
+  save();
+}
 function save(){localStorage.setItem('stock_v2',JSON.stringify(items));localStorage.setItem('stock_purchases',JSON.stringify(purchases));}
 function stp(u){return STEP[u]??1;}
 function fq(n,u){if(u==='kg'||u==='litro')return parseFloat(n.toFixed(1));if(u==='gramos')return Math.round(n);return n%1===0?n:parseFloat(n.toFixed(2));}
