@@ -74,6 +74,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .btn-save:disabled{opacity:.4;cursor:not-allowed}
 .empty{text-align:center;color:var(--muted);padding:50px 0}
 .empty-icon{font-size:42px;margin-bottom:10px}
+.fab{position:fixed;bottom:24px;right:20px;width:54px;height:54px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(79,142,247,.4);display:flex;align-items:center;justify-content:center;z-index:200;transition:transform .15s}
+.fab:active{transform:scale(.92)}
+.form-select{width:100%;background:var(--bg);border:2px solid var(--border);border-radius:12px;padding:12px 16px;color:var(--text);font-size:16px;outline:none;appearance:none;transition:border-color .2s}
+.form-select:focus{border-color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 </style>
 </head>
 <body>
@@ -102,6 +107,46 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <div class="page" id="page-historial">
   <div id="list-historial"></div>
 </div>
+<button class="fab" onclick="openNewItem()">+</button>
+
+<div class="modal-wrap" id="new-overlay" onclick="handleNewOverlay(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nuevo ítem</div>
+    <div class="form-group">
+      <label class="form-label">Nombre</label>
+      <input type="text" class="form-input" id="ni-name" placeholder="Ej: Lentejas" style="font-size:16px;text-align:left" oninput="niCheck()">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Categoría</label>
+        <select class="form-select" id="ni-cat">
+          <option>Comida</option><option>Limpieza</option><option>Higiene</option><option>Perro</option><option>Casa</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Lugar de compra</label>
+        <select class="form-select" id="ni-lugar">
+          <option>Supermercado</option><option>Verdulería</option><option>Carnicería</option><option>Pescadería</option><option>Dietética</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Unidad</label>
+        <select class="form-select" id="ni-unit">
+          <option>unid</option><option>kg</option><option>gramos</option><option>litro</option><option>ml</option><option>paquete</option><option>lata</option><option>pote</option><option>frasco</option><option>atado</option><option>bolsa</option><option>rodajas</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Stock objetivo</label>
+        <input type="number" class="form-input" id="ni-target" placeholder="0" inputmode="decimal" style="font-size:16px" oninput="niCheck()">
+      </div>
+    </div>
+    <button class="btn-save" id="ni-save" onclick="saveNewItem()" disabled>Agregar ítem</button>
+  </div>
+</div>
+
 <div class="overlay" id="buy-overlay" onclick="handleOverlay(event)">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -212,6 +257,10 @@ function deletePurchase(id){purchases=purchases.filter(p=>p.id!==id);save();rend
 function closeModal(){document.getElementById('buy-overlay').classList.remove('open');buyItemId=null;}
 function handleOverlay(e){if(e.target===document.getElementById('buy-overlay'))closeModal();}
 
+function openNewItem(){document.getElementById('ni-name').value='';document.getElementById('ni-target').value='';document.getElementById('ni-save').disabled=true;document.getElementById('new-overlay').classList.add('open');setTimeout(()=>document.getElementById('ni-name').focus(),300);}
+function niCheck(){const n=document.getElementById('ni-name').value.trim(),t=parseFloat(document.getElementById('ni-target').value);document.getElementById('ni-save').disabled=!(n&&t>0);}
+function saveNewItem(){const name=document.getElementById('ni-name').value.trim();const cat=document.getElementById('ni-cat').value;const lugar=document.getElementById('ni-lugar').value;const unit=document.getElementById('ni-unit').value;const target=parseFloat(document.getElementById('ni-target').value)||1;if(!name)return;items.push({id:'i'+Date.now(),cat,lugar,name,unit,target,current:0});save();document.getElementById('new-overlay').classList.remove('open');renderAll();}
+function handleNewOverlay(e){if(e.target===document.getElementById('new-overlay'))document.getElementById('new-overlay').classList.remove('open');}
 function renderAll(){renderHeader();renderStock();renderCompras();renderHistorial();}
 function renderHeader(){
   document.getElementById('st-out').textContent=items.filter(i=>getStatus(i)==='out').length;
