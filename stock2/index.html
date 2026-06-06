@@ -215,6 +215,21 @@ const SEED=[
 ];
 const LI={"Supermercado":"🛒","Verdulería":"🥬","Carnicería":"🥩","Pescadería":"🐟","Dietética":"🌾"};
 const STEP={kg:0.1,litro:0.25,gramos:25,unid:1,paquete:1,frasco:1,lata:1,pote:1,atado:1,bolsa:1,rodajas:1};
+// Migrar datos del formato anterior si existen
+(function(){
+  if(!localStorage.getItem('stock_v2') && localStorage.getItem('stock_items')){
+    try{
+      const old=JSON.parse(localStorage.getItem('stock_items'));
+      if(old&&old.length){
+        const migrated=old.map(i=>({
+          id:i.id, cat:i.cat, lugar:'Supermercado',
+          name:i.name, unit:i.unit, target:i.target, current:i.current||0
+        }));
+        localStorage.setItem('stock_v2',JSON.stringify(migrated));
+      }
+    }catch(e){}
+  }
+})();
 let items=JSON.parse(localStorage.getItem('stock_v2')||'null');
 let purchases=JSON.parse(localStorage.getItem('stock_purchases')||'[]');
 let buyItemId=null,fS='Todos',fC='Todos';
@@ -258,26 +273,46 @@ function renderStock(){
 }
 function renderCompras(){
   chips('filter-compras',fC,'setFC',getLugares);
-  const allFaltantes=(fC==='Todos'?items:items.filter(i=>i.lugar===fC)).filter(i=>i.current<i.target);
+  const all=(fC==='Todos'?items:items.filter(i=>i.lugar===fC)).filter(i=>i.current<i.target);
   const el=document.getElementById('list-compras');
   const kpiEl=document.getElementById('kpi-compras');
-  if(!allFaltantes.length){el.innerHTML=empty('✅','Todo el stock completo');kpiEl.innerHTML='';return;}
-  // KPI total estimado
-  let total=0,sinPrecio=0;
-  allFaltantes.forEach(item=>{
-    const falta=Math.max(0,item.target-item.current);
-    const lp=glp(item.id);
-    if(lp>0)total+=falta*lp;else sinPrecio++;
+  if(!all.length){el.innerHTML=empty('✅','Todo el stock completo');kpiEl.innerHTML='';return;}
+  let total=0,sinP=0;
+  all.forEach(function(item){
+    var falta=Math.max(0,item.target-item.current);
+    var lp=glp(item.id);
+    if(lp>0)total+=falta*lp;else sinP++;
   });
-  kpiEl.innerHTML='<div class="kpi-card"><div><div class="kpi-label">Total estimado de compra</div><div class="kpi-sub">'+(sinPrecio>0?sinPrecio+' ítem'+(sinPrecio>1?'s':'')+' sin precio histórico':'Basado en último precio registrado')+'</div></div><div class="kpi-value">'+fp(total)+'</div></div>';
-  const g={};allFaltantes.forEach(i=>{if(!g[i.lugar])g[i.lugar]=[];g[i.lugar].push(i);});
-  Object.values(g).forEach(a=>a.sort((a,b)=>{const sa=gs(a),sb=gs(b);if(sa==='out'&&sb!=='out')return -1;if(sb==='out'&&sa!=='out')return 1;return a.name.localeCompare(b.name);}));
-  el.innerHTML=Object.entries(g).map(([lugar,gi])=>'<div class="lugar-header">'+(LI[lugar]||'🏪')+' '+lugar+'</div>'+gi.map(item=>{
-    const falta=fq(item.target-item.current,item.unit),curr=fq(item.current,item.unit),tgt=fq(item.target,item.unit);
-    const lp=glp(item.id),lpFmt=fp(lp);
-    const estimado=lp>0?fp(Math.max(0,item.target-item.current)*lp):null;
-    return'<div class="compra-item"><div class="compra-row1"><div class="dot '+(gs(item)==='out'?'dot-out':'dot-low')+'"></div><div class="compra-name">'+item.name+'</div><div class="falta-badge">+'+falta+' '+item.unit+'</div></div><div class="compra-row2"><div class="compra-detail">Tenés '+curr+' · Obj '+tgt+(lpFmt?'<br><span class="item-last-price">Último: '+lpFmt+'/u'+(estimado?' · Est: '+estimado:'')+'</span>':'<br><span style="font-size:10px;color:var(--muted)">Sin precio histórico</span>')+'</div><button class="btn-comprar" onclick="openBuy(''+item.id+'')">+ Compra</button></div></div>';
-  }).join('')).join('');
+  kpiEl.innerHTML='<div class="kpi-card"><div><div class="kpi-label">Total estimado de compra</div><div class="kpi-sub">'+(sinP>0?sinP+' ítem'+(sinP>1?'s':'')+' sin precio histórico':'Basado en último precio registrado')+'</div></div><div class="kpi-value">'+(fp(total)||'$0')+'</div></div>';
+  var g={};all.forEach(function(i){if(!g[i.lugar])g[i.lugar]=[];g[i.lugar].push(i);});
+  Object.values(g).forEach(function(a){a.sort(function(a,b){var sa=gs(a),sb=gs(b);if(sa==='out'&&sb!=='out')return -1;if(sb==='out'&&sa!=='out')return 1;return a.name.localeCompare(b.name);});});
+  el.innerHTML=Object.entries(g).map(function(entry){
+    var lugar=entry[0],gi=entry[1];
+    var icon=LI[lugar]||'\u{1F3EA}';
+    return '<div class="lugar-header">'+icon+' '+lugar+'</div>'+gi.map(function(item){
+      var falta=fq(item.target-item.current,item.unit);
+      var curr=fq(item.current,item.unit);
+      var tgt=fq(item.target,item.unit);
+      var lp=glp(item.id);
+      var lpFmt=fp(lp);
+      var est=lp>0?fp(Math.max(0,item.target-item.current)*lp):null;
+      var dot=gs(item)==='out'?'dot-out':'dot-low';
+      var priceRow=lpFmt
+        ?('<br><span class="item-last-price">Último: '+lpFmt+'/u'+(est?' &middot; Est: <strong>'+est+'</strong>':'')+'</span>')
+        :'<br><span style="font-size:10px;color:var(--muted)">Sin precio histórico</span>';
+      return '<div class="compra-item">'
+        +'<div class="compra-row1">'
+          +'<div class="dot '+dot+'"></div>'
+          +'<div class="compra-name">'+item.name+'</div>'
+          +'<div class="falta-badge">+'+falta+' '+item.unit+'</div>'
+        +'</div>'
+        +'<div class="compra-row2">'
+          +'<div class="compra-detail">Tenés '+curr+' · Obj '+tgt+priceRow+'</div>'
+          +'<button class="btn-comprar" onclick="openBuy(\''+item.id+'\')">+ Compra</button>'
+        +'</div>'
+        +'</div>';
+    }).join('');
+  }).join('');
 }
 function renderHistorial(){
   const el=document.getElementById('list-historial');
